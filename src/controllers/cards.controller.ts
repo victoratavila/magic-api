@@ -7,6 +7,30 @@ import { Prisma } from "@prisma/client";
 export class CardsController {
     constructor(private service: CardsService){}
 
+    importFromText = async (req: Request, res: Response) => {
+    const text = typeof req.body === "string" ? req.body : req.body?.text;
+
+    if (typeof text !== "string" || !text.trim()) {
+      return res.status(400).json({ message: "Campo 'text' é obrigatório" });
+    }
+
+    const result = await this.service.importFromText(text);
+
+    if (!result.ok) {
+      return res.status(400).json({
+        message: "Falha ao importar",
+        totalLines: result.totalLines,
+        errors: result.errors,
+      });
+    }
+
+    return res.status(201).json({
+      message: "Import concluído",
+      totalLines: result.totalLines,
+      created: result.created,
+    });
+  };
+
 
     list = async (req: Request, res: Response) => {
 

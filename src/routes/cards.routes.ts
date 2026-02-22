@@ -22,5 +22,7 @@ router.get("/ownership", controller.findByOwnership);
   router.put("/:id", controller.updateOwnership);   // Update
   router.delete("/:id", controller.delete);// Delete
 
+  router.post("/bulk-add", controller.importFromText);
+
   return router;
 }

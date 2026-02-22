@@ -1,10 +1,25 @@
 import { prisma } from "../db/prisma";
+import { Prisma } from "@prisma/client";
 
 // DTOs (Data Transfer Objects): the shapes we expect for input data.
 export type createCardDTO = { name: string; set: string, image_url: string , own: boolean};
 export type updateCardDTO = { name?: string; set?: string, image_url?: string , own?: boolean};
 
+    export type CreateCardInput = {
+    name: string;
+    set: string;
+    own: boolean;
+    image_url: string
+};
+
 export class CardsRepository {
+
+    async createMany(cards: Prisma.CardCreateManyInput[]) {
+    return prisma.card.createMany({
+      data: cards,
+      skipDuplicates: true, // precisa de @@unique([name, set]) no schema.prisma
+    });
+  }
 
     // These the methods (functions) from the class, that the controller will call
     findAllInDatabase(){
@@ -56,4 +71,6 @@ async deleteCard(id: string){
         where: { id: id}
     })
 }
+
+
 }
