@@ -1,0 +1,18 @@
+
+
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: magic-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 12345
+      POSTGRES_DB: magic-postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+volumes:
+  pg_data:
