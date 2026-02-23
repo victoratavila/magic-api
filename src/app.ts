@@ -18,6 +18,7 @@ app.use(express.text());
 // Register routes
 app.use(routes);
 
-app.listen(8080, () => {
-  console.log(`API running on http://localhost:8080`);
+const port = Number(process.env.PORT ?? 8080);
+app.listen(port, () => {
+  console.log(`API running on port ${port}`);
 });
