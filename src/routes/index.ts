@@ -7,4 +7,4 @@ export const routes = Router();
 routes.use("/cards", cardsRoutes());
 
 // Healthcheck endpoint (useful for monitoring)
-routes.get("/health", (_req, res) => res.json({ ok: true }));
+routes.get("/health-check", (_req, res) => res.json({ ok: true }));
