@@ -262,8 +262,13 @@ export class CardsService {
     };
   }
 
+  async deleteAllCards(){
+    return this.repo.deleteAllCards();
+  }
+
    async createCard(data: CreateCardDTO) {
 
+    // Search for the card image
     const url = `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(
       data.name
     )}`;

@@ -25,12 +25,12 @@ export function cardsRoutes() {
   router.post("/", cardsController.create);     // Create
   router.get("/", cardsController.list);        // Read all (list)
   router.get("/name/:name", cardsController.findByName)
-router.get("/ownership", cardsController.findByOwnership);
+  router.get("/ownership", cardsController.findByOwnership);
   router.get("/exists/:name", cardsController.cardExists)
   router.put("/:id", cardsController.updateOwnership);   // Update
   router.delete("/:id", cardsController.delete);// Delete
   router.get("/filter", cardsController.findByFilter)
-
+  router.delete("/delete/all", cardsController.deleteAllCards);
   router.post("/bulk-add", cardsController.importFromText);
 
   router.get("/decks", decksController.list);

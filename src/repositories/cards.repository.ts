@@ -91,5 +91,9 @@ async deleteCard(id: string){
     })
 }
 
+async deleteAllCards(){
+    return prisma.card.deleteMany({});
+}
+
 
 }

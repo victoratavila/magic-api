@@ -74,6 +74,19 @@ export class CardsController {
     }
   };
 
+  deleteAllCards = async (req: Request, res: Response) => {
+    try {
+      const deletedCards = await this.service.deleteAllCards();
+      
+      res.json({
+        "success": "All of the cards were successfully deleted",
+        "deleted_cards": deletedCards
+      })
+    } catch(err) {
+      res.status(500).json(err)
+    }
+  }
+
     findByName = async (req: Request, res: Response) => {
       const { name } = req.params;
 
