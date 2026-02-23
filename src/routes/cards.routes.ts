@@ -4,25 +4,37 @@ import { Router } from "express";
 import { CardsController } from "../controllers/cards.controller";
 import { CardsRepository } from "../repositories/cards.repository";
 import { CardsService } from "../services/cards.services";
+import { DeckRepository } from "../repositories/decks.repository";
+import { DeckService } from "../services/decks.services";
+import { DeckController } from "../controllers/decks.controller";
 
 export function cardsRoutes() {
   const router = Router();
 
   // Manual dependency injection:
-  const repo = new CardsRepository()
-  const service = new CardsService(repo)
-  const controller = new CardsController(service);
+  const cardsRepo = new CardsRepository()
+  const cardsService = new CardsService(cardsRepo)
+  const cardsController = new CardsController(cardsService);
+
+  const decksRepo = new DeckRepository()
+  const decksService = new DeckService(decksRepo)
+  const decksController = new DeckController(decksService);
+  
 
   // CRUD endpoints
-  router.post("/", controller.create);     // Create
-  router.get("/", controller.list);        // Read all (list)
-  router.get("/name/:name", controller.findByName)
-router.get("/ownership", controller.findByOwnership);
-  router.get("/exists/:name", controller.cardExists)
-  router.put("/:id", controller.updateOwnership);   // Update
-  router.delete("/:id", controller.delete);// Delete
+  router.post("/", cardsController.create);     // Create
+  router.get("/", cardsController.list);        // Read all (list)
+  router.get("/name/:name", cardsController.findByName)
+router.get("/ownership", cardsController.findByOwnership);
+  router.get("/exists/:name", cardsController.cardExists)
+  router.put("/:id", cardsController.updateOwnership);   // Update
+  router.delete("/:id", cardsController.delete);// Delete
 
-  router.post("/bulk-add", controller.importFromText);
+  router.post("/bulk-add", cardsController.importFromText);
+
+  router.get("/decks", decksController.list);
+  router.post("/decks", decksController.create);
+
 
   return router;
 }

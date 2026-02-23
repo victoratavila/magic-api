@@ -1,27 +1,25 @@
 services:
- db:
- image: postgres:16-alpine
- environment:
- POSTGRES_USER: postgres
- POSTGRES_PASSWORD: 12345
- POSTGRES_DB: magic_postgres
- volumes:
- - pg_data:/var/lib/postgresql/data
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 12345
+      POSTGRES_DB: magic_postgres
+    volumes:
+      - pg_data:/var/lib/postgresql/data
 
- api:
- build: .
- depends_on:
- - db
- DATABASE_URL: postgresql://postgres:12345@db:5432/magic_postgres
- # ou, se sua lib não usa DATABASE_URL:
- # DB_HOST: db
- # DB_PORT: 5432
- # DB_USER: postgres
- # DB_PASSWORD: 12345
- # DB_NAME: magic_postgres
- ports:
- - "3000:3000" # ajuste para a porta real do seu app
- # command: npm run start:prod # ajuste se necessário
+  api:
+    build: .
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgresql://postgres:12345@db:5432/magic_postgres
+    expose:
+      - "8080"
+    # Opcional: se quiser garantir a porta via env
+    # environment:
+    #   DATABASE_URL: postgresql://postgres:12345@db:5432/magic_postgres
+    #   PORT: 8080
 
 volumes:
- pg_data:
+  pg_data:
