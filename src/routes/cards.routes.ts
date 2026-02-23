@@ -29,6 +29,7 @@ router.get("/ownership", cardsController.findByOwnership);
   router.get("/exists/:name", cardsController.cardExists)
   router.put("/:id", cardsController.updateOwnership);   // Update
   router.delete("/:id", cardsController.delete);// Delete
+  router.get("/filter", cardsController.findByFilter)
 
   router.post("/bulk-add", cardsController.importFromText);
 

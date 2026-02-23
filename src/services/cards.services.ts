@@ -202,6 +202,24 @@ export class CardsService {
     return this.repo.findAllInDatabase();
   }
 
+  async findByFilter(name: string, filter: string){
+
+    // If the user wants to view all cards, regarless of the ownership status
+    if(filter == "all"){
+      const cards = await this.repo.findByName(name);
+      return cards;
+    }
+
+    if(filter == "own"){
+      const cards = await this.repo.findByNameAndOwnership(name, true);
+      return cards;
+    } else {
+      const cards = await this.repo.findByNameAndOwnership(name, false);
+      return cards;
+    }
+
+  }
+
   findByOwnership(status: boolean){
     return this.repo.findByOwnership(status);
   }

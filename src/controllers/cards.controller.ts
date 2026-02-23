@@ -1,8 +1,13 @@
 import { Request, Response } from "express";
 import { CardsService } from "../services/cards.services";
 import { CreateCardDTO } from "../dtos/card.dto";
-import { ZodError } from "zod";
+import { ZodError, z } from "zod";
 import { Prisma } from "@prisma/client";
+
+const filterSchema = z.object({
+  name: z.string().min(1),
+  filter: z.enum(["all", "own", "missing"]).default("all"),
+});
 
 export class CardsController {
     constructor(private service: CardsService){}
@@ -39,6 +44,8 @@ export class CardsController {
 
     }
 
+    
+
     cardExists = async (req: Request, res: Response) => {
       const { name } = req.params;
 
@@ -51,9 +58,21 @@ export class CardsController {
           res.json(cardExists)
       }
       
-
-   
     }
+
+     findByFilter = async (req: Request, res: Response) => {
+    try {
+      const { name, filter } = filterSchema.parse(req.query);
+
+      const cards = await this.service.findByFilter(name, filter);
+
+      return res.status(200).json(cards);
+    } catch {
+      return res.status(400).json({
+        error: "Use ?name=...&filter=all|own|missing",
+      });
+    }
+  };
 
     findByName = async (req: Request, res: Response) => {
       const { name } = req.params;

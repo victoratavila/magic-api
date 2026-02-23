@@ -26,9 +26,28 @@ export class CardsRepository {
         return prisma.card.findMany({ orderBy: { updatedAt: 'desc'}})
     }
 
+       // These the methods (functions) from the class, that the controller will call
+    searchCardsByFilter(allCards: boolean, own: boolean){
+
+
+        
+    }
+
     findByOwnership(own: boolean){
         return prisma.card.findMany({
             where: {
+                own: own
+            }
+        })
+    }
+
+     findByNameAndOwnership(name: string, own: boolean){
+        return prisma.card.findMany({
+            where: {
+                name: {
+                    contains: name,
+                    mode: "insensitive"
+                },
                 own: own
             }
         })
