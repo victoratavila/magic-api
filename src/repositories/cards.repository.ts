@@ -23,7 +23,7 @@ export class CardsRepository {
 
     // These the methods (functions) from the class, that the controller will call
     findAllInDatabase(){
-        return prisma.card.findMany({ orderBy: { createdAt: 'desc'}})
+        return prisma.card.findMany({ orderBy: { updatedAt: 'desc'}})
     }
 
     findByOwnership(own: boolean){

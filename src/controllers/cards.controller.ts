@@ -156,7 +156,7 @@ create = async (req: Request, res: Response) => {
 
     if(cardExists == false) {
       return res.status(404).json({
-        'error': `No Magic The Gathering card was found matching the name ${data.name}` 
+        'error': `No Magic The Gathering card was found matching the provided name, please try with a different one` 
       })
     } 
 
