@@ -23,18 +23,18 @@ export class CardsRepository {
 
     // These the methods (functions) from the class, that the controller will call
     findAllInDatabase(){
-        return prisma.card.findMany({ orderBy: { updatedAt: 'desc'}})
-    }
-
-       // These the methods (functions) from the class, that the controller will call
-    searchCardsByFilter(allCards: boolean, own: boolean){
-
-
-        
+        return prisma.card.findMany({
+             orderBy: {
+                id: 'asc'
+            }
+        })
     }
 
     findByOwnership(own: boolean){
         return prisma.card.findMany({
+            orderBy: {
+                id: 'asc'
+            },
             where: {
                 own: own
             }
@@ -43,6 +43,9 @@ export class CardsRepository {
 
      findByNameAndOwnership(name: string, own: boolean){
         return prisma.card.findMany({
+            orderBy: {
+                id: 'asc'
+            },
             where: {
                 name: {
                     contains: name,
@@ -55,6 +58,11 @@ export class CardsRepository {
 
     async findByName(name: string){
         return prisma.card.findMany({
+
+            orderBy: {
+                id: 'asc'
+            },
+
             where: {
                 name: {
                 contains: name,
@@ -65,6 +73,7 @@ export class CardsRepository {
     }
 
      findById(id: string){
+        
         return prisma.card.findUnique({
             where: {id: id}
         })
