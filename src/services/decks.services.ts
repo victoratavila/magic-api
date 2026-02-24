@@ -1,6 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { DeckRepository } from "../repositories/decks.repository";
-import { createCardDTO } from "../repositories/cards.repository";
+// import { createCardDTO } from "../repositories/cards.repository";
 import { createDeckDTO } from "../dtos/deck.dto";
 
 export class DeckService {
@@ -21,4 +21,5 @@ export class DeckService {
   deckAlreadyExists(name: string){
     return this.repo.deckAlreadyExists(name);
   }
+  
 }

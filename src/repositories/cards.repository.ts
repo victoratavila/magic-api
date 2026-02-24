@@ -1,9 +1,9 @@
 import { prisma } from "../db/prisma";
 import { Prisma } from "@prisma/client";
+import { CreateCardDTO } from "../dtos/card.dto";
 
 // DTOs (Data Transfer Objects): the shapes we expect for input data.
-export type createCardDTO = { name: string; set: string, image_url: string , own: boolean};
-export type updateCardDTO = { name?: string; set?: string, image_url?: string , own?: boolean};
+
 
     export type CreateCardInput = {
     name: string;
@@ -79,7 +79,7 @@ export class CardsRepository {
         })
     }
 
-    async createCard(data: createCardDTO) {
+    async createCard(data: CreateCardDTO) {
     return prisma.card.create({ data });
     }
 
@@ -102,6 +102,14 @@ async deleteCard(id: string){
 
 async deleteAllCards(){
     return prisma.card.deleteMany({});
+}
+
+async findCardsByDeck(deckId: string){
+    return await prisma.card.findMany({
+        where: {
+            deckId: deckId
+        }
+    })
 }
 
 

@@ -3,6 +3,9 @@ import { CardsService } from "../services/cards.services";
 import { CreateCardDTO } from "../dtos/card.dto";
 import { ZodError, z } from "zod";
 import { Prisma } from "@prisma/client";
+import { DeckController } from "./decks.controller";
+import { DeckService } from "../services/decks.services";
+import { deckIdParamSchema } from "../dtos/deck.id.dto";
 
 const filterSchema = z.object({
   name: z.string().min(1),
@@ -10,31 +13,31 @@ const filterSchema = z.object({
 });
 
 export class CardsController {
-    constructor(private service: CardsService){}
+    constructor(private service: CardsService, private deckService: DeckService){}
 
-    importFromText = async (req: Request, res: Response) => {
-    const text = typeof req.body === "string" ? req.body : req.body?.text;
+  //   importFromText = async (req: Request, res: Response) => {
+  //   const text = typeof req.body === "string" ? req.body : req.body?.text;
 
-    if (typeof text !== "string" || !text.trim()) {
-      return res.status(400).json({ message: "Campo 'text' é obrigatório" });
-    }
+  //   if (typeof text !== "string" || !text.trim()) {
+  //     return res.status(400).json({ message: "Campo 'text' é obrigatório" });
+  //   }
 
-    const result = await this.service.importFromText(text);
+  //   const result = await this.service.importFromText(text);
 
-    if (!result.ok) {
-      return res.status(400).json({
-        message: "Falha ao importar",
-        totalLines: result.totalLines,
-        errors: result.errors,
-      });
-    }
+  //   if (!result.ok) {
+  //     return res.status(400).json({
+  //       message: "Falha ao importar",
+  //       totalLines: result.totalLines,
+  //       errors: result.errors,
+  //     });
+  //   }
 
-    return res.status(201).json({
-      message: "Import concluído",
-      totalLines: result.totalLines,
-      created: result.created,
-    });
-  };
+  //   return res.status(201).json({
+  //     message: "Import concluído",
+  //     totalLines: result.totalLines,
+  //     created: result.created,
+  //   });
+  // };
 
 
     list = async (req: Request, res: Response) => {
@@ -43,6 +46,43 @@ export class CardsController {
         return res.json(cardList)
 
     }
+
+   findCardsByDeck = async (req: Request, res: Response) => {
+  try {
+
+    const { deckId } = deckIdParamSchema.parse(req.params);
+
+    const cards = await this.service.findCardsByDeck(deckId);
+
+    return res.status(200).json({
+      deckId: deckId,
+      success: true,
+      cards,
+    });
+
+  } catch (error: any) {
+
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid deckId format"
+      });
+    }
+
+    if (error.message === "Deck not found") {
+      return res.status(404).json({
+        success: false,
+        error: "Deck not found"
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      error: "Internal error"
+    });
+
+  }
+};
 
     
 
@@ -188,7 +228,7 @@ create = async (req: Request, res: Response) => {
 
     if(cardExists == false) {
       return res.status(404).json({
-        'error': `No Magic The Gathering card was found matching the provided name, please try with a different one` 
+        'error': `No card was found matching the provided name, please try with a different one` 
       })
     } 
 
@@ -198,7 +238,18 @@ create = async (req: Request, res: Response) => {
       success: true,
       card_created: createdCard,
     });
+
   } catch (error: any) {
+
+  if (error.message === "Deck not found") {
+
+    return res.status(404).json({
+      success: false,
+      error: "Deck not found. A card can only be created if the target deck exists."
+    });
+
+  }
+
     // Erro de validação (DTO)
     if (error instanceof ZodError) {
       return res.status(400).json({

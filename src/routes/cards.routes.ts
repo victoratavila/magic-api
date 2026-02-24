@@ -13,11 +13,12 @@ export function cardsRoutes() {
 
   // Manual dependency injection:
   const cardsRepo = new CardsRepository()
-  const cardsService = new CardsService(cardsRepo)
-  const cardsController = new CardsController(cardsService);
-
   const decksRepo = new DeckRepository()
+
+  const cardsService = new CardsService(cardsRepo, decksRepo)
   const decksService = new DeckService(decksRepo)
+
+  const cardsController = new CardsController(cardsService, decksService);
   const decksController = new DeckController(decksService);
   
 
@@ -31,10 +32,11 @@ export function cardsRoutes() {
   router.delete("/:id", cardsController.delete);// Delete
   router.get("/filter", cardsController.findByFilter)
   router.delete("/delete/all", cardsController.deleteAllCards);
-  router.post("/bulk-add", cardsController.importFromText);
+  // router.post("/bulk-add", cardsController.importFromText);
 
   router.get("/decks", decksController.list);
   router.post("/decks", decksController.create);
+  router.get("/decks/:deckId", cardsController.findCardsByDeck);
 
 
   return router;

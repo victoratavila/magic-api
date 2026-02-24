@@ -12,7 +12,7 @@ export class DeckRepository {
     }
 
     async deleteDeck(id: string){
-    const deletedDeck = await prisma.card.delete({
+    const deletedDeck = await prisma.deck.delete({
         where: { id: id}
     })
 
@@ -32,4 +32,9 @@ export class DeckRepository {
 
         return deck;
     }
+
+    async findDeckById(id: string) {
+         return prisma.deck.findUnique({ where: { id } }); // retorna Deck | null
+    }
+
 }

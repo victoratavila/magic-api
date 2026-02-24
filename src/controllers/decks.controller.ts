@@ -29,8 +29,8 @@ export class DeckController {
 
             const data = createDeckDTO.safeParse(req.body);
 
-            if(!data.success){
-                res.status(400).json({"Error": "Please provide the name of the deck to create"})
+            if(data.error){
+                res.status(400).json(data.error)
             } else {
 
                 const deckAlreadyExists = await this.service.deckAlreadyExists(data.data.name);
