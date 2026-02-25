@@ -25,9 +25,8 @@ export function cardsRoutes() {
   // CRUD endpoints
   router.post("/", cardsController.create);     // Create
   router.get("/", cardsController.list);        // Read all (list)
-  router.get("/name/:name", cardsController.findByName)
   router.get("/ownership", cardsController.findByOwnership);
-  router.get("/exists/:name", cardsController.cardExists)
+  // router.get("/exists/:name", cardsController.findCardByName)
   router.put("/:id", cardsController.updateOwnership);   // Update
   router.delete("/:id", cardsController.delete);// Delete
   router.get("/filter", cardsController.findByFilter)
@@ -37,6 +36,7 @@ export function cardsRoutes() {
   router.get("/decks", decksController.list);
   router.post("/decks", decksController.create);
   router.get("/decks/:deckId", cardsController.findCardsByDeck);
+  router.delete("/decks/:deckId", decksController.deleteDeck);
 
 
   return router;

@@ -41,12 +41,13 @@ export class CardsRepository {
         })
     }
 
-     findByNameAndOwnership(name: string, own: boolean){
+     findByNameAndOwnership(deckId: string, name: string, own: boolean){
         return prisma.card.findMany({
             orderBy: {
                 id: 'asc'
             },
             where: {
+                deckId: deckId,
                 name: {
                     contains: name,
                     mode: "insensitive"
@@ -56,7 +57,7 @@ export class CardsRepository {
         })
     }
 
-    async findByName(name: string){
+    async findByName(deckId: string, name: string){
         return prisma.card.findMany({
 
             orderBy: {
@@ -64,6 +65,7 @@ export class CardsRepository {
             },
 
             where: {
+                deckId: deckId,
                 name: {
                 contains: name,
                 mode: "insensitive"

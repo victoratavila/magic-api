@@ -6,11 +6,19 @@ import { createDeckDTO } from "../dtos/deck.dto";
 export class DeckService {
     constructor(private repo: DeckRepository){}
 
-    findAllDecks(){
+  findAllDecks(){
     return this.repo.findAllDecks();
   }
 
-  deleteDeck(id: string){
+  async deleteDeck(id: string){
+
+    // Check if deck exists before searching for it
+    const deckExists = await this.repo.findDeckById(id);
+
+    if(deckExists == null){
+      throw new Error('Deck not found');
+    }
+    
     return this.repo.deleteDeck(id);
   }
 
@@ -20,6 +28,10 @@ export class DeckService {
 
   deckAlreadyExists(name: string){
     return this.repo.deckAlreadyExists(name);
+  }
+
+  findDeckById(id: string){
+    return this.repo.findDeckById(id);
   }
   
 }

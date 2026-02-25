@@ -204,19 +204,19 @@ export class CardsService {
     return this.repo.findAllInDatabase();
   }
 
-  async findByFilter(name: string, filter: string){
+  async findByFilter(deckId: string, name: string, filter: string){
 
     // If the user wants to view all cards, regarless of the ownership status
     if(filter == "all"){
-      const cards = await this.repo.findByName(name);
+      const cards = await this.repo.findByName(deckId, name);
       return cards;
     }
 
     if(filter == "own"){
-      const cards = await this.repo.findByNameAndOwnership(name, true);
+      const cards = await this.repo.findByNameAndOwnership(deckId, name, true);
       return cards;
-    } else {
-      const cards = await this.repo.findByNameAndOwnership(name, false);
+    } else if(filter == "missing") {
+      const cards = await this.repo.findByNameAndOwnership(deckId, name, false);
       return cards;
     }
 
@@ -235,8 +235,8 @@ export class CardsService {
     return check;
   }
 
-  findByName(name: string){
-    return this.repo.findByName(name);
+  findByName(deckId: string, name: string){
+    return this.repo.findByName(deckId, name);
   }
 
   deleteCard(id: string){
@@ -250,7 +250,7 @@ export class CardsService {
 
   }
 
-  async cardExists(name: string){
+  async findCardByName(name: string){
     const url = `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(
       name
     )}`;
@@ -300,9 +300,16 @@ export class CardsService {
     return this.repo.createCard(payload);
   }
 
-  findCardsByDeck(id: string){
-    const cards = this.repo.findCardsByDeck(id)
+  async findCardsByDeck(id: string){
 
+    // Check if deck exists before searching for it
+    const deckExists = await this.deckRepo.findDeckById(id);
+
+    if(deckExists == null){
+      throw new Error('Deck not found');
+    }
+    
+    const cards = await this.repo.findCardsByDeck(id)
     return cards;
   }
 

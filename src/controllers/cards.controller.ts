@@ -6,8 +6,10 @@ import { Prisma } from "@prisma/client";
 import { DeckController } from "./decks.controller";
 import { DeckService } from "../services/decks.services";
 import { deckIdParamSchema } from "../dtos/deck.id.dto";
+import { uuidParam } from "../dtos/uuid.Paramdto";
 
 const filterSchema = z.object({
+  deckId: z.string().uuid(),
   name: z.string().min(1),
   filter: z.enum(["all", "own", "missing"]).default("all"),
 });
@@ -57,6 +59,7 @@ export class CardsController {
     return res.status(200).json({
       deckId: deckId,
       success: true,
+      cards_amount: cards.length,
       cards,
     });
 
@@ -86,27 +89,30 @@ export class CardsController {
 
     
 
-    cardExists = async (req: Request, res: Response) => {
-      const { name } = req.params;
+    // findCardByName = async (req: Request, res: Response) => {
+    //   const { name } = req.params;
 
-      if(!name) {
-        res.status(400).json({
-          'Error': 'please provide a name to check if a card existss'
-        })
-      } else {
-          const cardExists = await this.service.cardExists(name)
-          res.json(cardExists)
-      }
+    //   if(!name) {
+    //     res.status(400).json({
+    //       'Error': 'please provide a name to check if a card existss'
+    //     })
+    //   } else {
+    //       const cardExists = await this.service.findCardByName(name)
+    //       res.json(cardExists)
+    //   }
       
-    }
+    // }
 
+      // Find cards based on filter (all, own, missing)
      findByFilter = async (req: Request, res: Response) => {
     try {
-      const { name, filter } = filterSchema.parse(req.query);
+      const { deckId, name, filter } = filterSchema.parse(req.query);
+      console.log(deckId, name, filter)
 
-      const cards = await this.service.findByFilter(name, filter);
+      const cards = await this.service.findByFilter(deckId, name, filter);
 
-      return res.status(200).json(cards);
+      res.status(200).json(cards);
+
     } catch {
       return res.status(400).json({
         error: "Use ?name=...&filter=all|own|missing",
@@ -127,19 +133,19 @@ export class CardsController {
     }
   }
 
-    findByName = async (req: Request, res: Response) => {
-      const { name } = req.params;
+    // findByName = async (req: Request, res: Response) => {
+    //   const { name } = req.params;
 
-      if(!name){
-        res.status(400).json({
-          "Error": "Please provide the name of the card you would like to find"
-        })
-      } else {
+    //   if(!name){
+    //     res.status(400).json({
+    //       "Error": "Please provide the name of the card you would like to find"
+    //     })
+    //   } else {
 
-      const findCard = await this.service.findByName(name);
-      return res.json(findCard);
-      } 
-    }
+    //   const findCard = await this.service.findByName(deckId, name);
+    //   return res.json(findCard);
+    //   } 
+    // }
 
     delete = async (req: Request, res: Response) => {
 
@@ -166,10 +172,12 @@ export class CardsController {
       
     }
 
+    // Route to update the status of ownership of a card between true or false
     updateOwnership = async (req: Request, res: Response) => {
 
       const { own } = req.body;
       const { id } = req.params;
+
       if(id == undefined || own == undefined ) {
 
         res.status(400).json({
@@ -178,16 +186,21 @@ export class CardsController {
 
       } else {
 
+        try {
       // Check if card exists
       const card = await this.service.findById(id)
+
       if(card == null || card == undefined){
-        return res.status(404).json({
-          "error": `No card was found matching the id ${id}` 
-        })
+          return res.status(404).json({
+            "error": `No card was found matching the id ${id}` 
+          })
       } else {
-        const updateOwnership = await this.service.updateOwnership(id, own)
-        return res.json(updateOwnership)
+          const updateOwnership = await this.service.updateOwnership(id, own)
+          return res.json(updateOwnership)
       }
+        } catch(error: any) {
+          res.json(error.message)
+        }
 
       }
 
@@ -224,7 +237,7 @@ findByOwnership = async (req: Request, res: Response) => {
 create = async (req: Request, res: Response) => {
   try {
     const data = CreateCardDTO.parse(req.body);
-    const cardExists = await this.service.cardExists(data.name);
+    const cardExists = await this.service.findCardByName(data.name);
 
     if(cardExists == false) {
       return res.status(404).json({

@@ -34,7 +34,7 @@ export class DeckRepository {
     }
 
     async findDeckById(id: string) {
-         return prisma.deck.findUnique({ where: { id } }); // retorna Deck | null
+         return await prisma.deck.findUnique({ where: { id } }); // retorna Deck | null
     }
 
 }

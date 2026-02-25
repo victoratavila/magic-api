@@ -12,15 +12,28 @@ export class DeckController {
 
     }
 
-    delete = async (req: Request, res: Response) => {
+    deleteDeck = async (req: Request, res: Response) => {
 
-        const { id } = req.params;
+        const { deckId } = req.params;
 
-        if(!id) {
+        if(!deckId) {
             res.status(400).json({"Error": "Please provide the id of the deck you would like to delete"})
         } else {
-            const deletedDeck = await this.service.deleteDeck(id);
-            return res.json(deletedDeck)    
+
+            try {
+                const deletedDeck = await this.service.deleteDeck(deckId);
+                return res.json(deletedDeck)    
+                
+            } catch(error: any) {
+
+                if (error.message === "Deck not found") {
+                return res.status(404).json({
+                    success: false,
+                    error: "Deck not found"
+                });
+            }
+            }
+            
         }
 
     }
