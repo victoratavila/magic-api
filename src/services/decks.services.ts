@@ -34,4 +34,8 @@ export class DeckService {
     return this.repo.findDeckById(id);
   }
   
+  checkMaxCardsandCurrentCards(deckId: string){
+    return this.repo.checkMaxCardsandCurrentCards(deckId)
+  }
+  
 }

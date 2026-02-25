@@ -6,7 +6,7 @@ import { CreateCardDTO } from "../dtos/card.dto";
 import { CardsRepository } from "../repositories/cards.repository";
 import { Prisma } from "@prisma/client";
 import { DeckRepository } from "../repositories/decks.repository";
-import { string } from "zod/v4";
+import { errorClass } from "../utils/errorClass";
 
 type ScryfallNamedResponse = {
   object: string;
@@ -278,14 +278,13 @@ export class CardsService {
 
     const resp = await fetch(url);
 
+    // If no image is available in the Scryfall API
       if (!resp.ok) {
           const payload = {
       ...data,
       image_url: 'not_available',
     };
-
     return this.repo.createCard(payload);
-
     }
 
     const scryfall: ScryfallNamedResponse = await resp.json();
@@ -297,7 +296,22 @@ export class CardsService {
       image_url: imageUrl,
     };
 
-    return this.repo.createCard(payload);
+    const deckData = await this.deckRepo.checkMaxCardsandCurrentCards(data.deckId);
+
+    if (!deckData || deckData.cards_max === undefined) {
+  throw new Error("Deck not found");
+  }
+
+  if (deckData.cardCount + 1 > deckData.cards_max) {
+    throw new errorClass(
+    `Deck limit exceeded. Current cards ${deckData.cardCount} - max of cards: ${deckData.cards_max}`,
+    409
+);
+  }
+
+  return this.repo.createCard(payload);
+
+    
   }
 
   async findCardsByDeck(id: string){

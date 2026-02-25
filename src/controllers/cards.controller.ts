@@ -7,6 +7,7 @@ import { DeckController } from "./decks.controller";
 import { DeckService } from "../services/decks.services";
 import { deckIdParamSchema } from "../dtos/deck.id.dto";
 import { uuidParam } from "../dtos/uuid.Paramdto";
+import { errorClass } from "../utils/errorClass";
 
 const filterSchema = z.object({
   deckId: z.string().uuid(),
@@ -63,6 +64,8 @@ export class CardsController {
       cards,
     });
 
+    
+
   } catch (error: any) {
 
     if (error instanceof z.ZodError) {
@@ -107,7 +110,6 @@ export class CardsController {
      findByFilter = async (req: Request, res: Response) => {
     try {
       const { deckId, name, filter } = filterSchema.parse(req.query);
-      console.log(deckId, name, filter)
 
       const cards = await this.service.findByFilter(deckId, name, filter);
 
@@ -253,6 +255,15 @@ create = async (req: Request, res: Response) => {
     });
 
   } catch (error: any) {
+
+  if (error instanceof errorClass) {
+
+    return res.status(error.statusCode).json({
+      success: false,
+      message: error.message
+    });
+
+  }
 
   if (error.message === "Deck not found") {
 
