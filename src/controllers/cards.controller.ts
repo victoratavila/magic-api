@@ -55,11 +55,15 @@ export class CardsController {
 
     const { deckId } = deckIdParamSchema.parse(req.params);
 
+    const cardAmountLimit = (await this.deckService.checkMaxCardsandCurrentCards(deckId)).cards_max;
+    console.log(cardAmountLimit)
+
     const cards = await this.service.findCardsByDeck(deckId);
 
     return res.status(200).json({
       deckId: deckId,
       success: true,
+      cards_max: cardAmountLimit,
       cards_amount: cards.length,
       cards,
     });
