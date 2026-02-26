@@ -97,16 +97,17 @@ export class CardsController {
   // }
 
   // Find cards based on filter (all, own, missing)
+  // Find cards based on filter (all, own, missing)
   findByFilter = async (req: Request, res: Response) => {
     try {
       const { deckId, name, filter } = searchFilter.parse(req.query);
 
       const cards = await this.service.findByFilter(deckId, name, filter);
 
-      res.status(200).json(cards);
+      return res.status(200).json(cards);
     } catch {
       return res.status(400).json({
-        error: "Use ?name=...&filter=all|own|missing",
+        error: "Use ?deckId=...&filter=all|own|missing&name=optional",
       });
     }
   };

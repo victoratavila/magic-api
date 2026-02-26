@@ -38,5 +38,7 @@ export function cardsRoutes() {
   );
   router.put("/update/deck", decksController.updateDeckInfo);
 
+  router.post("/:deckId/bulk", decksController.bulkAddCards);
+
   return router;
 }

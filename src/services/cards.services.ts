@@ -8,6 +8,8 @@ import { Prisma } from "@prisma/client";
 import { DeckRepository } from "../repositories/decks.repository";
 import { errorClass } from "../utils/errorClass";
 
+type CardFilter = "all" | "own" | "missing";
+
 type ScryfallNamedResponse = {
   object: string;
   not_found?: boolean;
@@ -213,20 +215,21 @@ export class CardsService {
     return this.repo.findAllInDatabase();
   }
 
-  async findByFilter(deckId: string, name: string, filter: string) {
-    // If the user wants to view all cards, regarless of the ownership status
-    if (filter == "all") {
-      const cards = await this.repo.findByName(deckId, name);
-      return cards;
+  async findByFilter(
+    deckId: string,
+    name: string | undefined,
+    filter: CardFilter,
+  ) {
+    if (filter === "all") {
+      return this.repo.findByName(deckId, name);
     }
 
-    if (filter == "own") {
-      const cards = await this.repo.findByNameAndOwnership(deckId, name, true);
-      return cards;
-    } else if (filter == "missing") {
-      const cards = await this.repo.findByNameAndOwnership(deckId, name, false);
-      return cards;
+    if (filter === "own") {
+      return this.repo.findByNameAndOwnership(deckId, name, true);
     }
+
+    // missing
+    return this.repo.findByNameAndOwnership(deckId, name, false);
   }
 
   findByOwnership(status: boolean) {

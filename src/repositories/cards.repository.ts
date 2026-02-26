@@ -5,10 +5,11 @@ import { CreateCardDTO } from "../dtos/card.dto";
 // DTOs (Data Transfer Objects): the shapes we expect for input data.
 
 export type CreateCardInput = {
+  deckId: string;
   name: string;
-  set: string;
-  own: boolean;
-  image_url: string;
+  set?: string | null;
+  own?: boolean;
+  image_url?: string | null;
 };
 
 export class CardsRepository {
@@ -39,34 +40,48 @@ export class CardsRepository {
     });
   }
 
-  findByNameAndOwnership(deckId: string, name: string, own: boolean) {
+  findByNameAndOwnership(
+    deckId: string,
+    name: string | undefined,
+    own: boolean,
+  ) {
     return prisma.card.findMany({
-      orderBy: {
-        id: "asc",
-      },
+      orderBy: { id: "asc" },
       where: {
-        deckId: deckId,
-        name: {
-          contains: name,
-          mode: "insensitive",
-        },
-        own: own,
+        deckId,
+        own,
+        ...(name && name.trim()
+          ? {
+              name: {
+                contains: name.trim(),
+                mode: "insensitive",
+              },
+            }
+          : {}),
       },
     });
   }
 
-  async findByName(deckId: string, name: string) {
-    return prisma.card.findMany({
-      orderBy: {
-        id: "asc",
-      },
+  async bulkAddCards(cards: CreateCardInput[]) {
+    return prisma.card.createMany({
+      data: cards,
+    });
+  }
 
+  findByName(deckId: string, name?: string) {
+    return prisma.card.findMany({
+      orderBy: { id: "asc" },
       where: {
-        deckId: deckId,
-        name: {
-          contains: name,
-          mode: "insensitive",
-        },
+        deckId,
+
+        ...(name?.trim()
+          ? {
+              name: {
+                contains: name.trim(),
+                mode: "insensitive",
+              },
+            }
+          : {}),
       },
     });
   }

@@ -4,6 +4,6 @@ import { z } from "zod";
 
 export const searchFilter = z.object({
   deckId: z.string().uuid(),
-  name: z.string().min(1),
+  name: z.string().optional().default(""),
   filter: z.enum(["all", "own", "missing"]).default("all"),
 });

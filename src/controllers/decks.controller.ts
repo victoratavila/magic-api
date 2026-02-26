@@ -5,6 +5,14 @@ import { deckIdParamSchema } from "../dtos/deck.id.dto";
 import z from "zod";
 import { updateDeckDTO } from "../dtos/update.deck.dto";
 
+import { DeckLimitExceededError } from "../services/decks.services";
+
+const bodySchema = z.object({
+  bulkText: z.string().min(1),
+  ownDefault: z.boolean().optional(),
+  fetchImages: z.boolean().optional(),
+});
+
 export class DeckController {
   constructor(private service: DeckService) {}
 
@@ -16,7 +24,6 @@ export class DeckController {
   deleteAllCardsFromDeck = async (req: Request, res: Response) => {
     try {
       const { deckId } = deckIdParamSchema.parse(req.params);
-      console.log(deckId);
 
       if (!deckId) {
         res.status(400).json({ Error: "please provide deckId" });
@@ -93,10 +100,7 @@ export class DeckController {
   updateDeckInfo = async (req: Request, res: Response) => {
     try {
       const { deckId, name, cards_max } = updateDeckDTO.parse(req.body);
-
-      console.log(deckId);
       const deck = await this.service.findDeckById(deckId);
-      console.log(deck);
 
       if (!deck) return res.status(404).json({ message: "Deck not found" });
 
@@ -111,6 +115,55 @@ export class DeckController {
         return res.status(400).json({ message: err.message });
       }
       return res.status(500).json({ message: "UNKNOWN_ERROR" });
+    }
+  };
+
+  bulkAddCards = async (req: Request, res: Response) => {
+    try {
+      const deckId = z.string().uuid().parse(req.params.deckId);
+
+      // ✅ CASO 1: body é texto puro (text/plain)
+      if (typeof req.body === "string") {
+        const result = await this.service.bulkAddCards({
+          deckId,
+          bulkText: req.body,
+        });
+
+        return res.status(201).json(result);
+      }
+
+      // ✅ CASO 2: body é JSON
+      const body = bodySchema.parse(req.body);
+
+      const payload = {
+        deckId,
+        bulkText: body.bulkText,
+        ...(body.ownDefault !== undefined
+          ? { ownDefault: body.ownDefault }
+          : {}),
+        ...(body.fetchImages !== undefined
+          ? { fetchImages: body.fetchImages }
+          : {}),
+      };
+
+      const result = await this.service.bulkAddCards(payload);
+
+      return res.status(201).json(result);
+    } catch (err) {
+      if (err instanceof DeckLimitExceededError) {
+        return res.status(400).json({
+          error: "Deck cards limit exceeded.",
+          details: err.details,
+        });
+      }
+
+      if (err instanceof z.ZodError) {
+        return res
+          .status(400)
+          .json({ error: "Invalid request.", details: err.flatten() });
+      }
+
+      return res.status(500).json({ error: "Internal server error." });
     }
   };
 }
