@@ -32,17 +32,20 @@ async function checkIfCardExists(name: string) {
 
   const response = await fetch(url);
 
-  if(!response){
+  if (!response) {
     return undefined;
   } else {
     return response;
   }
-  
 }
 
 function pickImageUrl(s: ScryfallNamedResponse): string | null {
   // carta normal
-  const direct = s.image_uris?.normal ?? s.image_uris?.png ?? s.image_uris?.large ?? s.image_uris?.small;
+  const direct =
+    s.image_uris?.normal ??
+    s.image_uris?.png ??
+    s.image_uris?.large ??
+    s.image_uris?.small;
   if (direct) return direct;
 
   // cartas “dupla face” (modal/transform etc)
@@ -51,10 +54,12 @@ function pickImageUrl(s: ScryfallNamedResponse): string | null {
   return fromFace ?? null;
 }
 
-
 export class CardsService {
-// Receive the repository in the constructor
-  constructor(private repo: CardsRepository, private deckRepo: DeckRepository) {}
+  // Receive the repository in the constructor
+  constructor(
+    private repo: CardsRepository,
+    private deckRepo: DeckRepository,
+  ) {}
 
   private chunk<T>(arr: T[], size: number) {
     const out: T[][] = [];
@@ -73,11 +78,13 @@ export class CardsService {
     return null;
   }
 
-  private async fetchScryfallImagesByNameAndSet(pairs: Array<{ name: string; set: string }>) {
+  private async fetchScryfallImagesByNameAndSet(
+    pairs: Array<{ name: string; set: string }>,
+  ) {
     // /cards/collection aceita até 75 identifiers por request
     const batches = this.chunk(
-      pairs.map(p => ({ name: p.name, set: p.set.toLowerCase() })),
-      75
+      pairs.map((p) => ({ name: p.name, set: p.set.toLowerCase() })),
+      75,
     );
 
     const imageMap = new Map<string, string>();
@@ -95,7 +102,9 @@ export class CardsService {
 
       if (!resp.ok) {
         const text = await resp.text().catch(() => "");
-        throw new Error(`Scryfall error: ${resp.status} ${resp.statusText} ${text}`);
+        throw new Error(
+          `Scryfall error: ${resp.status} ${resp.statusText} ${text}`,
+        );
       }
 
       const data = await resp.json();
@@ -200,91 +209,85 @@ export class CardsService {
   //   return { ok: true as const, totalLines: lines.length, created: result.count };
   // }
 
-  findAll(){
+  findAll() {
     return this.repo.findAllInDatabase();
   }
 
-  async findByFilter(deckId: string, name: string, filter: string){
-
+  async findByFilter(deckId: string, name: string, filter: string) {
     // If the user wants to view all cards, regarless of the ownership status
-    if(filter == "all"){
+    if (filter == "all") {
       const cards = await this.repo.findByName(deckId, name);
       return cards;
     }
 
-    if(filter == "own"){
+    if (filter == "own") {
       const cards = await this.repo.findByNameAndOwnership(deckId, name, true);
       return cards;
-    } else if(filter == "missing") {
+    } else if (filter == "missing") {
       const cards = await this.repo.findByNameAndOwnership(deckId, name, false);
       return cards;
     }
-
   }
 
-  findByOwnership(status: boolean){
+  findByOwnership(status: boolean) {
     return this.repo.findByOwnership(status);
   }
 
-  findById(id: string){
+  findById(id: string) {
     return this.repo.findById(id);
   }
 
-  async checkIfCartExistsBeforeSaving(name: string){
+  async checkIfCartExistsBeforeSaving(name: string) {
     const check = await checkIfCardExists(name);
     return check;
   }
 
-  findByName(deckId: string, name: string){
+  findByName(deckId: string, name: string) {
     return this.repo.findByName(deckId, name);
   }
 
-  deleteCard(id: string){
+  deleteCard(id: string) {
     return this.repo.deleteCard(id);
   }
 
-  updateOwnership(id: string, own: boolean){
-
-    return this.repo.updateOwnByName(id, own)
-    
-
+  updateOwnership(id: string, own: boolean) {
+    return this.repo.updateOwnByName(id, own);
   }
 
-  async findCardByName(name: string){
+  async findCardByName(name: string) {
     const url = `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(
-      name
+      name,
     )}`;
 
     const resp = await fetch(url);
 
-      if (!resp.ok) {
-          return false;
+    if (!resp.ok) {
+      return false;
     } else {
-          return true;
-    };
+      return true;
+    }
   }
 
-  async deleteAllCards(){
+  async deleteAllCards() {
     return this.repo.deleteAllCards();
   }
 
-   async createCard(data: CreateCardDTO) {
-
+  async createCard(data: CreateCardDTO) {
     const deckExists = await this.deckRepo.findDeckById(data.deckId);
     if (!deckExists) throw new Error("Deck not found");
- 
+
     // Search for the card image
     const url = `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(data.name)}`;
 
     const resp = await fetch(url);
 
     // If no image is available in the Scryfall API
-      if (!resp.ok) {
-          const payload = {
-      ...data,
-      image_url: 'not_available',
-    };
-    return this.repo.createCard(payload);
+    if (!resp.ok) {
+      const payload = {
+        ...data,
+        image_url: "not_available",
+      };
+      return this.repo.createCard(payload);
     }
 
     const scryfall: ScryfallNamedResponse = await resp.json();
@@ -296,36 +299,33 @@ export class CardsService {
       image_url: imageUrl,
     };
 
-    const deckData = await this.deckRepo.checkMaxCardsandCurrentCards(data.deckId);
+    const deckData = await this.deckRepo.checkMaxCardsandCurrentCards(
+      data.deckId,
+    );
 
     if (!deckData || deckData.cards_max === undefined) {
-  throw new Error("Deck not found");
+      throw new Error("Deck not found");
+    }
+
+    if (deckData.cardCount + 1 > deckData.cards_max) {
+      throw new errorClass(
+        `Deck limit exceeded. Current cards ${deckData.cardCount} - max of cards: ${deckData.cards_max}`,
+        409,
+      );
+    }
+
+    return this.repo.createCard(payload);
   }
 
-  if (deckData.cardCount + 1 > deckData.cards_max) {
-    throw new errorClass(
-    `Deck limit exceeded. Current cards ${deckData.cardCount} - max of cards: ${deckData.cards_max}`,
-    409
-);
-  }
-
-  return this.repo.createCard(payload);
-
-    
-  }
-
-  async findCardsByDeck(id: string){
-
+  async findCardsByDeck(id: string) {
     // Check if deck exists before searching for it
     const deckExists = await this.deckRepo.findDeckById(id);
 
-    if(deckExists == null){
-      throw new Error('Deck not found');
+    if (deckExists == null) {
+      throw new Error("Deck not found");
     }
-    
-    const cards = await this.repo.findCardsByDeck(id)
+
+    const cards = await this.repo.findCardsByDeck(id);
     return cards;
   }
-
-    
 }
