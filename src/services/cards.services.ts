@@ -5,6 +5,10 @@
 import { CreateCardDTO } from "../dtos/card.dto";
 import { CardsRepository } from "../repositories/cards.repository";
 import { Prisma } from "@prisma/client";
+import { DeckRepository } from "../repositories/decks.repository";
+import { errorClass } from "../utils/errorClass";
+
+type CardFilter = "all" | "own" | "missing";
 
 type ScryfallNamedResponse = {
   object: string;
@@ -30,17 +34,20 @@ async function checkIfCardExists(name: string) {
 
   const response = await fetch(url);
 
-  if(!response){
+  if (!response) {
     return undefined;
   } else {
     return response;
   }
-  
 }
 
 function pickImageUrl(s: ScryfallNamedResponse): string | null {
   // carta normal
-  const direct = s.image_uris?.normal ?? s.image_uris?.png ?? s.image_uris?.large ?? s.image_uris?.small;
+  const direct =
+    s.image_uris?.normal ??
+    s.image_uris?.png ??
+    s.image_uris?.large ??
+    s.image_uris?.small;
   if (direct) return direct;
 
   // cartas “dupla face” (modal/transform etc)
@@ -49,10 +56,12 @@ function pickImageUrl(s: ScryfallNamedResponse): string | null {
   return fromFace ?? null;
 }
 
-
 export class CardsService {
-// Receive the repository in the constructor
-  constructor(private repo: CardsRepository) {}
+  // Receive the repository in the constructor
+  constructor(
+    private repo: CardsRepository,
+    private deckRepo: DeckRepository,
+  ) {}
 
   private chunk<T>(arr: T[], size: number) {
     const out: T[][] = [];
@@ -71,11 +80,13 @@ export class CardsService {
     return null;
   }
 
-  private async fetchScryfallImagesByNameAndSet(pairs: Array<{ name: string; set: string }>) {
+  private async fetchScryfallImagesByNameAndSet(
+    pairs: Array<{ name: string; set: string }>,
+  ) {
     // /cards/collection aceita até 75 identifiers por request
     const batches = this.chunk(
-      pairs.map(p => ({ name: p.name, set: p.set.toLowerCase() })),
-      75
+      pairs.map((p) => ({ name: p.name, set: p.set.toLowerCase() })),
+      75,
     );
 
     const imageMap = new Map<string, string>();
@@ -93,7 +104,9 @@ export class CardsService {
 
       if (!resp.ok) {
         const text = await resp.text().catch(() => "");
-        throw new Error(`Scryfall error: ${resp.status} ${resp.statusText} ${text}`);
+        throw new Error(
+          `Scryfall error: ${resp.status} ${resp.statusText} ${text}`,
+        );
       }
 
       const data = await resp.json();
@@ -119,170 +132,165 @@ export class CardsService {
     return { imageMap, notFound };
   }
 
-  async importFromText(text: string) {
-    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  // async importFromText(text: string) {
+  //   const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
 
-    const parsed: Array<{ name: string; set: string }> = [];
-    const errors: Array<{ line: number; raw: string; reason: string }> = [];
+  //   const parsed: Array<{ name: string; set: string }> = [];
+  //   const errors: Array<{ line: number; raw: string; reason: string }> = [];
 
-    // Ex: "1 Windgrace's Judgment (EOC) 129 *F*"
-    // pega nome e set; ignora quantidade e número
-    const regex = /^\s*\d+\s+(.+?)\s*\(([^)]+)\)\s+\S+/;
+  //   // Ex: "1 Windgrace's Judgment (EOC) 129 *F*"
+  //   // pega nome e set; ignora quantidade e número
+  //   const regex = /^\s*\d+\s+(.+?)\s*\(([^)]+)\)\s+\S+/;
 
-    for (let i = 0; i < lines.length; i++) {
-      const raw = lines[i] ?? "";
-      const match = raw.match(regex);
+  //   for (let i = 0; i < lines.length; i++) {
+  //     const raw = lines[i] ?? "";
+  //     const match = raw.match(regex);
 
-      if (!match) {
-        errors.push({ line: i + 1, raw, reason: "Formato inválido" });
-        continue;
-      }
+  //     if (!match) {
+  //       errors.push({ line: i + 1, raw, reason: "Formato inválido" });
+  //       continue;
+  //     }
 
-      const name = (match[1] ?? "").trim();
-      const set = (match[2] ?? "").trim().toUpperCase();
+  //     const name = (match[1] ?? "").trim();
+  //     const set = (match[2] ?? "").trim().toUpperCase();
 
-      if (!name) {
-        errors.push({ line: i + 1, raw, reason: "Nome da carta ausente" });
-        continue;
-      }
-      if (!set) {
-        errors.push({ line: i + 1, raw, reason: "Set ausente" });
-        continue;
-      }
+  //     if (!name) {
+  //       errors.push({ line: i + 1, raw, reason: "Nome da carta ausente" });
+  //       continue;
+  //     }
+  //     if (!set) {
+  //       errors.push({ line: i + 1, raw, reason: "Set ausente" });
+  //       continue;
+  //     }
 
-      parsed.push({ name, set });
-    }
+  //     parsed.push({ name, set });
+  //   }
 
-    if (errors.length) {
-      return { ok: false as const, totalLines: lines.length, created: 0, errors };
-    }
+  //   if (errors.length) {
+  //     return { ok: false as const, totalLines: lines.length, created: 0, errors };
+  //   }
 
-    // dedupe por (name,set)
-    const unique = new Map<string, { name: string; set: string }>();
-    for (const c of parsed) {
-      const key = `${c.name.toLowerCase()}__${c.set}`;
-      if (!unique.has(key)) unique.set(key, c);
-    }
-    const uniqueCards = Array.from(unique.values());
+  //   // dedupe por (name,set)
+  //   const unique = new Map<string, { name: string; set: string }>();
+  //   for (const c of parsed) {
+  //     const key = `${c.name.toLowerCase()}__${c.set}`;
+  //     if (!unique.has(key)) unique.set(key, c);
+  //   }
+  //   const uniqueCards = Array.from(unique.values());
 
-    // busca imagens no Scryfall
-    const { imageMap, notFound } = await this.fetchScryfallImagesByNameAndSet(uniqueCards);
+  //   // busca imagens no Scryfall
+  //   const { imageMap, notFound } = await this.fetchScryfallImagesByNameAndSet(uniqueCards);
 
-    // valida se todas têm imagem
-    const missingImages = uniqueCards
-      .filter(c => !imageMap.get(`${c.name.toLowerCase()}__${c.set}`))
-      .map(c => ({ name: c.name, set: c.set }));
+  //   // valida se todas têm imagem
+  //   const missingImages = uniqueCards
+  //     .filter(c => !imageMap.get(`${c.name.toLowerCase()}__${c.set}`))
+  //     .map(c => ({ name: c.name, set: c.set }));
 
-    if (notFound.length || missingImages.length) {
-      return {
-        ok: false as const,
-        totalLines: lines.length,
-        created: 0,
-        errors: [
-          ...(notFound.length ? [{ line: 0, raw: "", reason: "Cartas não encontradas no Scryfall", notFound }] : []),
-          ...(missingImages.length ? [{ line: 0, raw: "", reason: "Cartas encontradas sem image_url", missingImages }] : []),
-        ],
-      };
-    }
+  //   if (notFound.length || missingImages.length) {
+  //     return {
+  //       ok: false as const,
+  //       totalLines: lines.length,
+  //       created: 0,
+  //       errors: [
+  //         ...(notFound.length ? [{ line: 0, raw: "", reason: "Cartas não encontradas no Scryfall", notFound }] : []),
+  //         ...(missingImages.length ? [{ line: 0, raw: "", reason: "Cartas encontradas sem image_url", missingImages }] : []),
+  //       ],
+  //     };
+  //   }
 
-    // monta payload pro Prisma
-    const toCreate: Prisma.CardCreateManyInput[] = uniqueCards.map(c => ({
-      name: c.name,
-      set: c.set,
-      own: false,
-      image_url: imageMap.get(`${c.name.toLowerCase()}__${c.set}`)!,
-    }));
+  //   // monta payload pro Prisma
+  //   const toCreate: Prisma.CardCreateManyInput[] = uniqueCards.map(c => ({
+  //     name: c.name,
+  //     set: c.set,
+  //     own: false,
+  //     image_url: imageMap.get(`${c.name.toLowerCase()}__${c.set}`)!,
+  //   }));
 
-    const result = await this.repo.createMany(toCreate);
+  //   const result = await this.repo.createMany(toCreate);
 
-    return { ok: true as const, totalLines: lines.length, created: result.count };
-  }
+  //   return { ok: true as const, totalLines: lines.length, created: result.count };
+  // }
 
-  findAll(){
+  findAll() {
     return this.repo.findAllInDatabase();
   }
 
-  async findByFilter(name: string, filter: string){
-
-    // If the user wants to view all cards, regarless of the ownership status
-    if(filter == "all"){
-      const cards = await this.repo.findByName(name);
-      return cards;
+  async findByFilter(
+    deckId: string,
+    name: string | undefined,
+    filter: CardFilter,
+  ) {
+    if (filter === "all") {
+      return this.repo.findByName(deckId, name);
     }
 
-    if(filter == "own"){
-      const cards = await this.repo.findByNameAndOwnership(name, true);
-      return cards;
-    } else {
-      const cards = await this.repo.findByNameAndOwnership(name, false);
-      return cards;
+    if (filter === "own") {
+      return this.repo.findByNameAndOwnership(deckId, name, true);
     }
 
+    // missing
+    return this.repo.findByNameAndOwnership(deckId, name, false);
   }
 
-  findByOwnership(status: boolean){
+  findByOwnership(status: boolean) {
     return this.repo.findByOwnership(status);
   }
 
-  findById(id: string){
+  findById(id: string) {
     return this.repo.findById(id);
   }
 
-  async checkIfCartExistsBeforeSaving(name: string){
+  async checkIfCartExistsBeforeSaving(name: string) {
     const check = await checkIfCardExists(name);
     return check;
   }
 
-  findByName(name: string){
-    return this.repo.findByName(name);
+  findByName(deckId: string, name: string) {
+    return this.repo.findByName(deckId, name);
   }
 
-  deleteCard(id: string){
+  deleteCard(id: string) {
     return this.repo.deleteCard(id);
   }
 
-  updateOwnership(id: string, own: boolean){
-
-    return this.repo.updateOwnByName(id, own)
-    
-
+  updateOwnership(id: string, own: boolean) {
+    return this.repo.updateOwnByName(id, own);
   }
 
-  async cardExists(name: string){
+  async findCardByName(name: string) {
     const url = `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(
-      name
+      name,
     )}`;
 
     const resp = await fetch(url);
 
-      if (!resp.ok) {
-          return false;
+    if (!resp.ok) {
+      return false;
     } else {
-          return true;
-    };
+      return true;
+    }
   }
 
-  async deleteAllCards(){
+  async deleteAllCards() {
     return this.repo.deleteAllCards();
   }
 
-   async createCard(data: CreateCardDTO) {
+  async createCard(data: CreateCardDTO) {
+    const deckExists = await this.deckRepo.findDeckById(data.deckId);
+    if (!deckExists) throw new Error("Deck not found");
 
     // Search for the card image
-    const url = `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(
-      data.name
-    )}`;
+    const url = `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(data.name)}`;
 
     const resp = await fetch(url);
 
-      if (!resp.ok) {
-          const payload = {
-      ...data,
-      image_url: 'not_available',
-    };
-
-    return this.repo.createCard(payload);
-
+    // If no image is available in the Scryfall API
+    if (!resp.ok) {
+      const payload = {
+        ...data,
+        image_url: "not_available",
+      };
+      return this.repo.createCard(payload);
     }
 
     const scryfall: ScryfallNamedResponse = await resp.json();
@@ -294,6 +302,33 @@ export class CardsService {
       image_url: imageUrl,
     };
 
+    const deckData = await this.deckRepo.checkMaxCardsandCurrentCards(
+      data.deckId,
+    );
+
+    if (!deckData || deckData.cards_max === undefined) {
+      throw new Error("Deck not found");
+    }
+
+    if (deckData.cardCount + 1 > deckData.cards_max) {
+      throw new errorClass(
+        `Deck limit exceeded. Current cards ${deckData.cardCount} - max of cards: ${deckData.cards_max}`,
+        409,
+      );
+    }
+
     return this.repo.createCard(payload);
+  }
+
+  async findCardsByDeck(id: string) {
+    // Check if deck exists before searching for it
+    const deckExists = await this.deckRepo.findDeckById(id);
+
+    if (deckExists == null) {
+      throw new Error("Deck not found");
+    }
+
+    const cards = await this.repo.findCardsByDeck(id);
+    return cards;
   }
 }

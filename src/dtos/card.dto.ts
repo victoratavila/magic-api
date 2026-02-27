@@ -1,13 +1,14 @@
 import { z } from "zod";
+import { string } from "zod/v4";
 
 export const CreateCardDTO = z.object({
+  name: z.string().trim().min(1, "card name is mandatory"),
 
-  name: z.string(),
+  set: z.string().trim().min(0).optional().default(""),
 
-  set: z.string(),
+  own: z.boolean().default(false),
 
-  own: z.boolean(),
-
+  deckId: z.string().uuid("deckId must be a valid UUID"),
 });
 
 export type CreateCardDTO = z.infer<typeof CreateCardDTO>;

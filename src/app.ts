@@ -3,7 +3,7 @@
 
 import express from "express";
 import cors from "cors";
-import { routes } from "./routes"
+import { routes } from "./routes";
 
 export const app = express();
 
@@ -11,9 +11,8 @@ export const app = express();
 app.use(cors());
 
 // Parse JSON bodies into req.body
-app.use(express.json());
-app.use(express.text({ type: "text/plain" }));
-app.use(express.text()); 
+app.use(express.text({ type: "text/plain", limit: "2mb" }));
+app.use(express.json({ limit: "2mb" }));
 
 // Register routes
 app.use(routes);

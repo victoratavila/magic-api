@@ -34,7 +34,6 @@ It also integrates with the **Scryfall API** to automatically fetch card images.
 
 # 📂 Project Structure
 
-
 ```text
 magic-api/
 │
@@ -54,16 +53,15 @@ magic-api/
 └── tsconfig.json
 ```
 
-
 # ⚙️ Features
 
-- Create cards  
-- Automatically fetch card image from Scryfall  
-- List cards  
-- Filter cards by ownership  
-- Organize cards into decks  
-- PostgreSQL database with Prisma  
-- Docker support  
+- Create cards
+- Automatically fetch card image from Scryfall
+- List cards
+- Filter cards by ownership
+- Organize cards into decks
+- PostgreSQL database with Prisma
+- Docker support
 
 ---
 
@@ -152,12 +150,12 @@ The API automatically fetches the card image from Scryfall.
 
 This project was created to practice:
 
-- REST API design  
-- Prisma and PostgreSQL  
-- Docker  
-- Backend architecture  
-- External API integration  
-- Production-ready deployment  
+- REST API design
+- Prisma and PostgreSQL
+- Docker
+- Backend architecture
+- External API integration
+- Production-ready deployment
 
 ---
 
@@ -165,8 +163,8 @@ This project was created to practice:
 
 This project includes:
 
-- Dockerfile  
-- docker-compose.prod.yml  
+- Dockerfile
+- docker-compose.prod.yml
 
 Ready for VPS deployment.
 
@@ -183,9 +181,9 @@ https://github.com/victoratavila
 
 # ⭐ Future Improvements
 
-- Authentication  
-- User system  
-- Deck improvements  
-- Pagination  
-- Automated tests  
-- Frontend integration  
+- Authentication
+- User system
+- Deck improvements
+- Pagination
+- Automated tests
+- Frontend integration

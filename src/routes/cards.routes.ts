@@ -1,5 +1,3 @@
-// Routes = map HTTP paths to controller actions.
-
 import { Router } from "express";
 import { CardsController } from "../controllers/cards.controller";
 import { CardsRepository } from "../repositories/cards.repository";
@@ -12,30 +10,35 @@ export function cardsRoutes() {
   const router = Router();
 
   // Manual dependency injection:
-  const cardsRepo = new CardsRepository()
-  const cardsService = new CardsService(cardsRepo)
-  const cardsController = new CardsController(cardsService);
+  const cardsRepo = new CardsRepository();
+  const decksRepo = new DeckRepository();
 
-  const decksRepo = new DeckRepository()
-  const decksService = new DeckService(decksRepo)
+  const cardsService = new CardsService(cardsRepo, decksRepo);
+  const decksService = new DeckService(decksRepo);
+
+  const cardsController = new CardsController(cardsService, decksService);
   const decksController = new DeckController(decksService);
-  
 
-  // CRUD endpoints
-  router.post("/", cardsController.create);     // Create
-  router.get("/", cardsController.list);        // Read all (list)
-  router.get("/name/:name", cardsController.findByName)
+  // Card Routes
+  router.post("/", cardsController.create); // Create
+  router.get("/", cardsController.list); // List all cards regardless of their decks
   router.get("/ownership", cardsController.findByOwnership);
-  router.get("/exists/:name", cardsController.cardExists)
-  router.put("/:id", cardsController.updateOwnership);   // Update
-  router.delete("/:id", cardsController.delete);// Delete
-  router.get("/filter", cardsController.findByFilter)
-  router.delete("/delete/all", cardsController.deleteAllCards);
-  router.post("/bulk-add", cardsController.importFromText);
+  router.put("/:id", cardsController.updateOwnership); // Update card ownership by id
+  router.delete("/:id", cardsController.delete); // Delete card by id
+  router.get("/filter", cardsController.findByFilter); // Search cards by deck, ownership status and card name
 
+  // Deck Routes
   router.get("/decks", decksController.list);
   router.post("/decks", decksController.create);
+  router.get("/decks/:deckId", cardsController.findCardsByDeck);
+  router.delete("/decks/:deckId", decksController.deleteDeck);
+  router.delete(
+    "/delete/all/deck/:deckId",
+    decksController.deleteAllCardsFromDeck,
+  );
+  router.put("/update/deck", decksController.updateDeckInfo);
 
+  router.post("/:deckId/bulk", decksController.bulkAddCards);
 
   return router;
 }
