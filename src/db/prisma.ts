@@ -1,6 +1,14 @@
-// Prisma client singleton.
-// We create ONE instance and reuse it in the whole app.
-
 import { PrismaClient } from "@prisma/client";
 
 export const prisma = new PrismaClient();
+
+export async function testDatabaseConnection() {
+  try {
+    await prisma.$connect();
+    console.log("✅ Database connected successfully");
+  } catch (error) {
+    console.error("❌ Database connection failed");
+    console.error(error);
+    process.exit(1);
+  }
+}

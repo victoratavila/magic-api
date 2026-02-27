@@ -4,6 +4,7 @@
 import express from "express";
 import cors from "cors";
 import { routes } from "./routes";
+import { testDatabaseConnection } from "./db/prisma";
 
 export const app = express();
 
@@ -17,7 +18,12 @@ app.use(express.json({ limit: "2mb" }));
 // Register routes
 app.use(routes);
 
-const port = Number(process.env.PORT ?? 8080);
-app.listen(port, "0.0.0.0", () => {
-  console.log(`API running on port ${port}`);
-});
+async function startServer() {
+  await testDatabaseConnection();
+
+  app.listen(8080, () => {
+    console.log("🚀 Server running on port 8080");
+  });
+}
+
+startServer();
