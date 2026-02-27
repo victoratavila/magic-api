@@ -118,6 +118,7 @@ export class DeckController {
     }
   };
 
+  // Function to import bulk of cards
   bulkAddCards = async (req: Request, res: Response) => {
     try {
       const deckId = z.string().uuid().parse(req.params.deckId);
@@ -163,7 +164,7 @@ export class DeckController {
           .json({ error: "Invalid request.", details: err.flatten() });
       }
 
-      return res.status(500).json({ error: "Internal server error." });
+      return res.status(500).json(err);
     }
   };
 }
