@@ -315,7 +315,9 @@ export class CardsController {
         deckId,
         own,
       );
-      res.status(200).json(updatedCards);
+      res.status(200).json({
+        updatedCount: updatedCards.count,
+      });
     } catch (error) {
       return res.status(500).json({
         error: "Internal error",
