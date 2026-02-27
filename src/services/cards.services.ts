@@ -132,85 +132,6 @@ export class CardsService {
     return { imageMap, notFound };
   }
 
-  // async importFromText(text: string) {
-  //   const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-
-  //   const parsed: Array<{ name: string; set: string }> = [];
-  //   const errors: Array<{ line: number; raw: string; reason: string }> = [];
-
-  //   // Ex: "1 Windgrace's Judgment (EOC) 129 *F*"
-  //   // pega nome e set; ignora quantidade e número
-  //   const regex = /^\s*\d+\s+(.+?)\s*\(([^)]+)\)\s+\S+/;
-
-  //   for (let i = 0; i < lines.length; i++) {
-  //     const raw = lines[i] ?? "";
-  //     const match = raw.match(regex);
-
-  //     if (!match) {
-  //       errors.push({ line: i + 1, raw, reason: "Formato inválido" });
-  //       continue;
-  //     }
-
-  //     const name = (match[1] ?? "").trim();
-  //     const set = (match[2] ?? "").trim().toUpperCase();
-
-  //     if (!name) {
-  //       errors.push({ line: i + 1, raw, reason: "Nome da carta ausente" });
-  //       continue;
-  //     }
-  //     if (!set) {
-  //       errors.push({ line: i + 1, raw, reason: "Set ausente" });
-  //       continue;
-  //     }
-
-  //     parsed.push({ name, set });
-  //   }
-
-  //   if (errors.length) {
-  //     return { ok: false as const, totalLines: lines.length, created: 0, errors };
-  //   }
-
-  //   // dedupe por (name,set)
-  //   const unique = new Map<string, { name: string; set: string }>();
-  //   for (const c of parsed) {
-  //     const key = `${c.name.toLowerCase()}__${c.set}`;
-  //     if (!unique.has(key)) unique.set(key, c);
-  //   }
-  //   const uniqueCards = Array.from(unique.values());
-
-  //   // busca imagens no Scryfall
-  //   const { imageMap, notFound } = await this.fetchScryfallImagesByNameAndSet(uniqueCards);
-
-  //   // valida se todas têm imagem
-  //   const missingImages = uniqueCards
-  //     .filter(c => !imageMap.get(`${c.name.toLowerCase()}__${c.set}`))
-  //     .map(c => ({ name: c.name, set: c.set }));
-
-  //   if (notFound.length || missingImages.length) {
-  //     return {
-  //       ok: false as const,
-  //       totalLines: lines.length,
-  //       created: 0,
-  //       errors: [
-  //         ...(notFound.length ? [{ line: 0, raw: "", reason: "Cartas não encontradas no Scryfall", notFound }] : []),
-  //         ...(missingImages.length ? [{ line: 0, raw: "", reason: "Cartas encontradas sem image_url", missingImages }] : []),
-  //       ],
-  //     };
-  //   }
-
-  //   // monta payload pro Prisma
-  //   const toCreate: Prisma.CardCreateManyInput[] = uniqueCards.map(c => ({
-  //     name: c.name,
-  //     set: c.set,
-  //     own: false,
-  //     image_url: imageMap.get(`${c.name.toLowerCase()}__${c.set}`)!,
-  //   }));
-
-  //   const result = await this.repo.createMany(toCreate);
-
-  //   return { ok: true as const, totalLines: lines.length, created: result.count };
-  // }
-
   findAll() {
     return this.repo.findAllInDatabase();
   }
@@ -330,5 +251,16 @@ export class CardsService {
 
     const cards = await this.repo.findCardsByDeck(id);
     return cards;
+  }
+
+  async updateAllCardsOwnership(deckId: string, own: boolean) {
+    const deckExists = await this.deckRepo.findDeckById(deckId);
+
+    if (deckExists == null) {
+      throw new Error("Deck not found");
+    }
+
+    const updatedCards = await this.repo.updateAllCardsOwnership(deckId, own);
+    return updatedCards;
   }
 }

@@ -7,6 +7,12 @@ import { DeckService } from "../services/decks.services";
 import { deckIdParamSchema } from "../dtos/deck.id.dto";
 import { errorClass } from "../utils/errorClass";
 import { searchFilter } from "../dtos/search.filter.dto";
+import { boolean } from "zod/v4";
+
+const updateAllSchema = z.object({
+  deckId: z.string().uuid(),
+  own: z.enum(["true", "false"]).transform((v) => v === "true"),
+});
 
 export class CardsController {
   constructor(
@@ -280,6 +286,39 @@ export class CardsController {
         success: false,
         error: "Internal server error",
         details: String(error?.message ?? error),
+      });
+    }
+  };
+
+  updateAllCardsOwnership = async (req: Request, res: Response) => {
+    const parsed = updateAllSchema.safeParse(req.query);
+
+    if (!parsed.success) {
+      return res.status(400).json({
+        error: "Use ?deckId=<uuid>&own=true|false",
+        details: parsed.error.flatten(),
+      });
+    }
+
+    const { deckId, own } = parsed.data;
+
+    try {
+      const deckExists = await this.deckService.findDeckById(deckId);
+
+      if (deckExists == null) {
+        return res.status(404).json({
+          error: "No deck found matching the provided id",
+        });
+      }
+
+      const updatedCards = await this.service.updateAllCardsOwnership(
+        deckId,
+        own,
+      );
+      res.status(200).json(updatedCards);
+    } catch (error) {
+      return res.status(500).json({
+        error: "Internal error",
       });
     }
   };

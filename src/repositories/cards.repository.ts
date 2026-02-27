@@ -122,4 +122,16 @@ export class CardsRepository {
       },
     });
   }
+
+  async updateAllCardsOwnership(deckId: string, own: boolean) {
+    return await prisma.card.updateMany({
+      where: {
+        deckId: deckId,
+      },
+
+      data: {
+        own: own,
+      },
+    });
+  }
 }
