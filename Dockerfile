@@ -10,9 +10,6 @@ COPY prisma.config.ts ./
 COPY tsconfig.json ./
 COPY src ./src
 
-# Prisma client
-RUN npx prisma generate
-
 # Build TS -> dist
 RUN npm run build
 
@@ -30,5 +27,4 @@ COPY --from=build /app/dist ./dist
 
 EXPOSE 8080
 
-# Aplica migrations e inicia
-CMD sh -c "npx prisma migrate deploy --config ./prisma.config.ts && node dist/app.js"
+CMD sh -c "npx prisma generate --config ./prisma.config.ts && npx prisma migrate deploy --config ./prisma.config.ts && node dist/app.js"
