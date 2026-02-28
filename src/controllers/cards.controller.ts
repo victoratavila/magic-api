@@ -262,7 +262,7 @@ export class CardsController {
         own,
       );
       res.status(200).json({
-        affected_cards: updatedCards.count,
+        affectedCards: updatedCards.count,
       });
     } catch (error) {
       return res.status(500).json({

@@ -4,7 +4,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model Card {
@@ -30,6 +29,7 @@ model Deck {
   id        String @id @default(uuid())
   name      String
   cards_max Int
+  commander_card_id  String?
 
   cards     Card[]
 

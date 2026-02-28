@@ -141,16 +141,28 @@ export class CardsService {
     name: string | undefined,
     filter: CardFilter,
   ) {
-    if (filter === "all") {
-      return this.repo.findByName(deckId, name);
+    if (filter == "all") {
+      const cards = await this.repo.findByName(deckId, name);
+      const commander_card_id = await this.deckRepo.findCommanderCardId(deckId);
+
+      const data = { commander_card_id, cards };
+      return data;
     }
 
-    if (filter === "own") {
-      return this.repo.findByNameAndOwnership(deckId, name, true);
+    if (filter == "own") {
+      const cards = await this.repo.findByNameAndOwnership(deckId, name, true);
+      const commander_card_id = await this.deckRepo.findCommanderCardId(deckId);
+
+      const data = { commander_card_id, cards };
+      return data;
     }
 
     // missing
-    return this.repo.findByNameAndOwnership(deckId, name, false);
+    const cards = await this.repo.findByNameAndOwnership(deckId, name, false);
+    const commander_card_id = await this.deckRepo.findCommanderCardId(deckId);
+
+    const data = { commander_card_id, cards };
+    return data;
   }
 
   findByOwnership(status: boolean) {

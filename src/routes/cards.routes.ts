@@ -17,7 +17,7 @@ export function cardsRoutes() {
   const decksService = new DeckService(decksRepo);
 
   const cardsController = new CardsController(cardsService, decksService);
-  const decksController = new DeckController(decksService);
+  const decksController = new DeckController(decksService, cardsService);
 
   // Card Routes
   router.post("/", cardsController.create); // Create
@@ -31,6 +31,7 @@ export function cardsRoutes() {
   // Deck Routes
   router.get("/decks", decksController.list);
   router.post("/decks", decksController.create);
+  router.get("/find/deck/:deckId", decksController.findDeckById);
   router.get("/decks/:deckId", cardsController.findCardsByDeck);
   router.delete("/decks/:deckId", decksController.deleteDeck);
   router.delete(
@@ -38,8 +39,8 @@ export function cardsRoutes() {
     decksController.deleteAllCardsFromDeck,
   );
   router.put("/update/deck", decksController.updateDeckInfo);
-
   router.post("/:deckId/bulk", decksController.bulkAddCards);
+  router.put("/set/commander", decksController.setCommanderCard);
 
   return router;
 }

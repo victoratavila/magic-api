@@ -6,6 +6,7 @@ import z from "zod";
 import { updateDeckDTO } from "../dtos/update.deck.dto";
 
 import { DeckLimitExceededError } from "../services/decks.services";
+import { CardsService } from "../services/cards.services";
 
 const bodySchema = z.object({
   bulkText: z.string().min(1),
@@ -14,7 +15,10 @@ const bodySchema = z.object({
 });
 
 export class DeckController {
-  constructor(private service: DeckService) {}
+  constructor(
+    private service: DeckService,
+    private card_service: CardsService,
+  ) {}
 
   list = async (req: Request, res: Response) => {
     const deckList = await this.service.findAllDecks();
@@ -97,6 +101,16 @@ export class DeckController {
     }
   };
 
+  findDeckById = async (req: Request, res: Response) => {
+    try {
+      let deckId = z.string().uuid().parse(req.params.deckId);
+      const findDeckById = await this.service.findDeckById(deckId);
+      return res.json(findDeckById);
+    } catch (err) {
+      res.status(400).json(err);
+    }
+  };
+
   updateDeckInfo = async (req: Request, res: Response) => {
     try {
       const { deckId, name, cards_max } = updateDeckDTO.parse(req.body);
@@ -165,6 +179,75 @@ export class DeckController {
       }
 
       return res.status(500).json(err);
+    }
+  };
+
+  setCommanderCard = async (req: Request, res: Response) => {
+    if (req.query.deckId == undefined || req.query.cardId == undefined) {
+      return res.status(400).json({
+        Error: "please provide deckId and cardId to set the commander card",
+      });
+    }
+
+    try {
+      let deckId = z.string().uuid().safeParse(req.query.deckId);
+      let cardId = z.string().uuid().safeParse(req.query.cardId);
+
+      if (deckId.success != true || cardId.success != true) {
+        return res.json({ deckId, cardId });
+      }
+
+      let deckIdParsed = req.query.deckId as string;
+      let cardIdParsed = req.query.cardId as string;
+
+      // Check if deck and card exists
+      const deckExists = await this.service.findDeckById(deckIdParsed);
+      const cardExists = await this.card_service.findById(cardIdParsed);
+
+      console.log(cardExists?.deckId);
+
+      // Check if deck and card exist in the system
+      if (deckExists == null || cardExists == null) {
+        return res.status(404).json({
+          Error: "no deck or card found based on the provided ids",
+        });
+      }
+
+      // Checking if the card chosen as the commander belongs to the deck
+      if (cardExists?.deckId != deckIdParsed) {
+        return res.status(403).json({
+          Error:
+            "you can't set a commander deck if it does not belong to this deck",
+          data: {
+            deck_card_already_belongs_to: deckExists,
+          },
+        });
+      }
+
+      try {
+        const setCommanderCard = this.service.setCommanderCard(
+          deckIdParsed,
+          cardIdParsed,
+        );
+
+        return res.json({
+          deck_id: deckIdParsed,
+          deck_name: deckExists?.name,
+          commander_id: cardIdParsed,
+          commander_name: cardExists?.name,
+        });
+      } catch (err) {
+        return res.status(400).json({
+          error: err,
+        });
+      }
+
+      res.json({ deckExists, cardExists });
+    } catch (err) {
+      return res.status(400).json({
+        error: "Deck cards limit exceeded.",
+        details: err,
+      });
     }
   };
 }

@@ -1,11 +1,10 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../db/prisma";
 import {
   DeckRepository,
   UpdateDeckData,
 } from "../repositories/decks.repository";
 import { createDeckDTO } from "../dtos/deck.dto";
 import z from "zod";
-const prisma = new PrismaClient();
 
 export class DeckLimitExceededError extends Error {
   constructor(
@@ -178,5 +177,9 @@ export class DeckService {
         warnings: parsed.warnings,
       };
     });
+  }
+
+  async setCommanderCard(deckId: string, card_id: string) {
+    return this.repo.setCommanderCard(deckId, card_id);
   }
 }

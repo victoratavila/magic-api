@@ -17,6 +17,7 @@ export class DeckRepository {
         id: true,
         name: true,
         cards_max: true,
+        commander_card_id: true,
         createdAt: true,
         updatedAt: true,
         _count: {
@@ -32,6 +33,7 @@ export class DeckRepository {
       name: deck.name,
       total_cards: deck._count.cards,
       cards_max: deck.cards_max,
+      commander_card_id: deck.commander_card_id,
       createdAt: deck.createdAt,
       updatedAt: deck.updatedAt,
     }));
@@ -127,5 +129,27 @@ export class DeckRepository {
         ...(data.cards_max !== undefined ? { cards_max: data.cards_max } : {}),
       },
     });
+  }
+
+  setCommanderCard(deckId: string, card_id: string) {
+    return prisma.deck.update({
+      where: {
+        id: deckId,
+      },
+      data: {
+        commander_card_id: card_id,
+      },
+    });
+  }
+
+  async findCommanderCardId(deckId: string) {
+    const deck = await prisma.deck.findUnique({
+      where: { id: deckId },
+      select: {
+        commander_card_id: true,
+      },
+    });
+
+    return deck?.commander_card_id ?? null;
   }
 }
