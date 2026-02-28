@@ -10,13 +10,10 @@ COPY prisma.config.ts ./prisma.config.ts
 COPY tsconfig.json ./
 COPY src ./src
 
-# Define DATABASE_URL fake apenas para build
 ENV DATABASE_URL="postgresql://user:pass@localhost:5432/db?schema=public"
 
-# Gera Prisma Client
 RUN npx prisma generate --config ./prisma.config.ts
 
-# Build TS
 RUN npm run build
 
 
