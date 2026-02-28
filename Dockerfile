@@ -6,6 +6,7 @@ COPY package*.json ./
 RUN npm ci
 
 COPY prisma ./prisma
+COPY prisma.config.ts ./
 COPY tsconfig.json ./
 COPY src ./src
 
@@ -24,10 +25,10 @@ ENV NODE_ENV=production
 COPY --from=build /app/package*.json ./
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/prisma ./prisma
+COPY --from=build /app/prisma.config.ts ./prisma.config.ts
 COPY --from=build /app/dist ./dist
 
-# Importante: Dokploy vai mapear o domínio pra essa porta do container
 EXPOSE 8080
 
 # Aplica migrations e inicia
-CMD sh -c "npx prisma migrate deploy && node dist/app.js"
+CMD sh -c "npx prisma migrate deploy --config ./prisma.config.ts && node dist/app.js"
