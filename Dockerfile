@@ -6,14 +6,17 @@ COPY package*.json ./
 RUN npm ci
 
 COPY prisma ./prisma
-COPY prisma.config.ts ./
+COPY prisma.config.ts ./prisma.config.ts
 COPY tsconfig.json ./
 COPY src ./src
 
-# Gera Prisma Client sem depender de DATABASE_URL real
-RUN npx prisma generate --schema=./prisma/schema.prisma --datasource-url="postgresql://user:pass@localhost:5432/db?schema=public"
+# Define DATABASE_URL fake apenas para build
+ENV DATABASE_URL="postgresql://user:pass@localhost:5432/db?schema=public"
 
-# Build TS -> dist
+# Gera Prisma Client
+RUN npx prisma generate --config ./prisma.config.ts
+
+# Build TS
 RUN npm run build
 
 
