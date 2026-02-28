@@ -10,6 +10,11 @@ COPY prisma.config.ts ./
 COPY tsconfig.json ./
 COPY src ./src
 
+# Prisma client (precisa existir antes do tsc)
+ARG DATABASE_URL="postgresql://user:pass@localhost:5432/db?schema=public"
+ENV DATABASE_URL=$DATABASE_URL
+RUN npx prisma generate
+
 # Build TS -> dist
 RUN npm run build
 
@@ -27,4 +32,4 @@ COPY --from=build /app/dist ./dist
 
 EXPOSE 8080
 
-CMD sh -c "npx prisma generate --config ./prisma.config.ts && npx prisma migrate deploy --config ./prisma.config.ts && node dist/app.js"
+CMD sh -c "npx prisma migrate deploy --config ./prisma.config.ts && node dist/app.js"
