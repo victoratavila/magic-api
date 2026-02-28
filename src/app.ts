@@ -21,7 +21,7 @@ app.use(routes);
 
 async function startServer() {
   await testDatabaseConnection();
-
+  console.log("DATABASE_URL:", process.env.DATABASE_URL);
   app.listen(8080, () => {
     console.log("🚀 Server running on port 8080");
   });
