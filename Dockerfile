@@ -10,10 +10,8 @@ COPY prisma.config.ts ./
 COPY tsconfig.json ./
 COPY src ./src
 
-# Prisma client (precisa existir antes do tsc)
-ARG DATABASE_URL="postgresql://user:pass@localhost:5432/db?schema=public"
-ENV DATABASE_URL=$DATABASE_URL
-RUN npx prisma generate
+# Gera Prisma Client sem depender de DATABASE_URL real
+RUN npx prisma generate --schema=./prisma/schema.prisma --datasource-url="postgresql://user:pass@localhost:5432/db?schema=public"
 
 # Build TS -> dist
 RUN npm run build
