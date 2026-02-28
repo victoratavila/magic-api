@@ -7,36 +7,18 @@ import { DeckService } from "../services/decks.services";
 import { deckIdParamSchema } from "../dtos/deck.id.dto";
 import { errorClass } from "../utils/errorClass";
 import { searchFilter } from "../dtos/search.filter.dto";
+import { boolean } from "zod/v4";
+
+const updateAllSchema = z.object({
+  deckId: z.string().uuid(),
+  own: z.enum(["true", "false"]).transform((v) => v === "true"),
+});
 
 export class CardsController {
   constructor(
     private service: CardsService,
     private deckService: DeckService,
   ) {}
-
-  //   importFromText = async (req: Request, res: Response) => {
-  //   const text = typeof req.body === "string" ? req.body : req.body?.text;
-
-  //   if (typeof text !== "string" || !text.trim()) {
-  //     return res.status(400).json({ message: "Campo 'text' é obrigatório" });
-  //   }
-
-  //   const result = await this.service.importFromText(text);
-
-  //   if (!result.ok) {
-  //     return res.status(400).json({
-  //       message: "Falha ao importar",
-  //       totalLines: result.totalLines,
-  //       errors: result.errors,
-  //     });
-  //   }
-
-  //   return res.status(201).json({
-  //     message: "Import concluído",
-  //     totalLines: result.totalLines,
-  //     created: result.created,
-  //   });
-  // };
 
   list = async (req: Request, res: Response) => {
     const cardList = await this.service.findAll();
@@ -82,22 +64,6 @@ export class CardsController {
     }
   };
 
-  // findCardByName = async (req: Request, res: Response) => {
-  //   const { name } = req.params;
-
-  //   if(!name) {
-  //     res.status(400).json({
-  //       'Error': 'please provide a name to check if a card existss'
-  //     })
-  //   } else {
-  //       const cardExists = await this.service.findCardByName(name)
-  //       res.json(cardExists)
-  //   }
-
-  // }
-
-  // Find cards based on filter (all, own, missing)
-  // Find cards based on filter (all, own, missing)
   findByFilter = async (req: Request, res: Response) => {
     try {
       const { deckId, name, filter } = searchFilter.parse(req.query);
@@ -124,20 +90,6 @@ export class CardsController {
       res.status(500).json(err);
     }
   };
-
-  // findByName = async (req: Request, res: Response) => {
-  //   const { name } = req.params;
-
-  //   if(!name){
-  //     res.status(400).json({
-  //       "Error": "Please provide the name of the card you would like to find"
-  //     })
-  //   } else {
-
-  //   const findCard = await this.service.findByName(deckId, name);
-  //   return res.json(findCard);
-  //   }
-  // }
 
   delete = async (req: Request, res: Response) => {
     const { id } = req.params;
@@ -280,6 +232,41 @@ export class CardsController {
         success: false,
         error: "Internal server error",
         details: String(error?.message ?? error),
+      });
+    }
+  };
+
+  updateAllCardsOwnership = async (req: Request, res: Response) => {
+    const parsed = updateAllSchema.safeParse(req.query);
+
+    if (!parsed.success) {
+      return res.status(400).json({
+        error: "Use ?deckId=<uuid>&own=true|false",
+        details: parsed.error.flatten(),
+      });
+    }
+
+    const { deckId, own } = parsed.data;
+
+    try {
+      const deckExists = await this.deckService.findDeckById(deckId);
+
+      if (deckExists == null) {
+        return res.status(404).json({
+          error: "No deck found matching the provided id",
+        });
+      }
+
+      const updatedCards = await this.service.updateAllCardsOwnership(
+        deckId,
+        own,
+      );
+      res.status(200).json({
+        affectedCards: updatedCards.count,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        error: "Internal error",
       });
     }
   };

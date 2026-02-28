@@ -5,6 +5,7 @@ import express from "express";
 import cors from "cors";
 import { routes } from "./routes";
 import { testDatabaseConnection } from "./db/prisma";
+import "dotenv/config";
 
 export const app = express();
 

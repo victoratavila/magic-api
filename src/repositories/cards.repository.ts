@@ -40,12 +40,12 @@ export class CardsRepository {
     });
   }
 
-  findByNameAndOwnership(
+  async findByNameAndOwnership(
     deckId: string,
     name: string | undefined,
     own: boolean,
   ) {
-    return prisma.card.findMany({
+    return await prisma.card.findMany({
       orderBy: { id: "asc" },
       where: {
         deckId,
@@ -70,10 +70,8 @@ export class CardsRepository {
 
   findByName(deckId: string, name?: string) {
     return prisma.card.findMany({
-      orderBy: { id: "asc" },
       where: {
         deckId,
-
         ...(name?.trim()
           ? {
               name: {
@@ -83,6 +81,7 @@ export class CardsRepository {
             }
           : {}),
       },
+      orderBy: { name: "asc" },
     });
   }
 
@@ -119,6 +118,18 @@ export class CardsRepository {
     return await prisma.card.findMany({
       where: {
         deckId: deckId,
+      },
+    });
+  }
+
+  async updateAllCardsOwnership(deckId: string, own: boolean) {
+    return await prisma.card.updateMany({
+      where: {
+        deckId: deckId,
+      },
+
+      data: {
+        own: own,
       },
     });
   }
