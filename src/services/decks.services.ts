@@ -212,15 +212,6 @@ export class DeckService {
       };
     }
 
-    // Dedupe em memória (opcional)
-    const seen = new Set<string>();
-    const expanded = expandedRaw.filter((c) => {
-      const key = `${c.deckId}::${c.name.toLowerCase()}::${c.set.toLowerCase()}::${c.own}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-
     // Checa limite do deck (fora de transaction longa)
     const deck = await prisma.deck.findUnique({
       where: { id: deckId },
@@ -229,6 +220,8 @@ export class DeckService {
         _count: { select: { cards: true } },
       },
     });
+
+    const expanded = expandedRaw;
 
     if (!deck) throw new Error("Deck not found.");
 
