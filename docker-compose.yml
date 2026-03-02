@@ -1,25 +1,14 @@
 services:
   db:
     image: postgres:16-alpine
+    ports:
+      - "5432:5432"
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: 12345
       POSTGRES_DB: magic_postgres
     volumes:
       - pg_data:/var/lib/postgresql/data
-
-  api:
-    build: .
-    depends_on:
-      - db
-    environment:
-      DATABASE_URL: postgresql://postgres:12345@db:5432/magic_postgres
-    expose:
-      - "8080"
-    # Opcional: se quiser garantir a porta via env
-    # environment:
-    #   DATABASE_URL: postgresql://postgres:12345@db:5432/magic_postgres
-    #   PORT: 8080
 
 volumes:
   pg_data:
