@@ -204,8 +204,6 @@ export class DeckController {
       const deckExists = await this.service.findDeckById(deckIdParsed);
       const cardExists = await this.card_service.findCardById(cardIdParsed);
 
-      console.log(cardExists?.deckId);
-
       // Check if deck and card exist in the system
       if (deckExists == null || cardExists == null) {
         return res.status(404).json({

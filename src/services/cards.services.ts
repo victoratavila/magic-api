@@ -320,7 +320,7 @@ export class CardsService {
       const updatedCard = this.repo.updateCardImageAndSet(
         cardId,
         new_image_url,
-        new_set_name,
+        new_set_name.toUpperCase(),
       );
       return updatedCard;
     }
