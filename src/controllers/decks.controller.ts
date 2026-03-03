@@ -4,7 +4,6 @@ import { createDeckDTO } from "../dtos/deck.dto";
 import { deckIdParamSchema } from "../dtos/deck.id.dto";
 import z from "zod";
 import { updateDeckDTO } from "../dtos/update.deck.dto";
-
 import { DeckLimitExceededError } from "../services/decks.services";
 import { CardsService } from "../services/cards.services";
 
@@ -247,5 +246,22 @@ export class DeckController {
         details: err,
       });
     }
+  };
+
+  exportCardList = async (req: Request, res: Response) => {
+    const schema = z.object({
+      deckId: z.string().uuid(),
+    });
+
+    const result = schema.safeParse(req.params);
+
+    if (!result.success) {
+      return res.status(400).json({ error: "Please provide a valid uuid" });
+    }
+
+    const { deckId } = result.data;
+
+    const exportCardList = await this.service.exportCardList(deckId);
+    res.type("text/plain").send(exportCardList);
   };
 }

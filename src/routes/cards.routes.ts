@@ -14,7 +14,7 @@ export function cardsRoutes() {
   const decksRepo = new DeckRepository();
 
   const cardsService = new CardsService(cardsRepo, decksRepo);
-  const decksService = new DeckService(decksRepo);
+  const decksService = new DeckService(decksRepo, cardsService);
 
   const cardsController = new CardsController(cardsService, decksService);
   const decksController = new DeckController(decksService, cardsService);
@@ -44,6 +44,7 @@ export function cardsRoutes() {
   router.put("/update/deck", decksController.updateDeckInfo);
   router.post("/:deckId/bulk", decksController.bulkAddCards);
   router.put("/set/commander", decksController.setCommanderCard);
+  router.get("/export/:deckId", decksController.exportCardList);
 
   return router;
 }
