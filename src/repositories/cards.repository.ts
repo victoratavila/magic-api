@@ -85,8 +85,8 @@ export class CardsRepository {
     });
   }
 
-  findById(id: string) {
-    return prisma.card.findUnique({
+  async findCardById(id: string) {
+    return await prisma.card.findUnique({
       where: { id: id },
     });
   }
@@ -130,6 +130,23 @@ export class CardsRepository {
 
       data: {
         own: own,
+      },
+    });
+  }
+
+  async updateCardImageAndSet(
+    card_id: string,
+    new_image_url: string,
+    new_set_name: string,
+  ) {
+    return await prisma.card.update({
+      where: {
+        id: card_id,
+      },
+
+      data: {
+        image_url: new_image_url,
+        set: new_set_name,
       },
     });
   }

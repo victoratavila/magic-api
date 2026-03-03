@@ -7,6 +7,7 @@ import { CardsRepository } from "../repositories/cards.repository";
 import { Prisma } from "@prisma/client";
 import { DeckRepository } from "../repositories/decks.repository";
 import { errorClass } from "../utils/errorClass";
+import { boolean } from "zod/v4";
 
 type CardFilter = "all" | "own" | "missing";
 
@@ -169,8 +170,8 @@ export class CardsService {
     return this.repo.findByOwnership(status);
   }
 
-  findById(id: string) {
-    return this.repo.findById(id);
+  findCardById(id: string) {
+    return this.repo.findCardById(id);
   }
 
   async checkIfCartExistsBeforeSaving(name: string) {
@@ -274,5 +275,57 @@ export class CardsService {
 
     const updatedCards = await this.repo.updateAllCardsOwnership(deckId, own);
     return updatedCards;
+  }
+
+  async bringCardSets(card_current_name: string, cardId: string) {
+    // Check if card exists
+    const card = await this.repo.findCardById(cardId);
+
+    if (card == null || card == undefined) {
+      throw new Error(
+        "No card found matching the provided id, please privide a new one",
+      );
+    }
+
+    const scryfallResponse = await fetch(
+      `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(card_current_name)}`,
+    ).then((r) => r.json());
+
+    const prints = await fetch(scryfallResponse.prints_search_uri).then((r) =>
+      r.json(),
+    );
+
+    return prints.data.map((p: any) => ({
+      set: p.set,
+      set_name: p.set_name,
+      image:
+        p.image_uris?.normal ?? p.card_faces?.[0]?.image_uris?.normal ?? null,
+    }));
+  }
+
+  async updateSetAndImageUrl(
+    card_current_name: string,
+    cardId: string,
+    new_set_name: string,
+    new_image_url: string,
+  ) {
+    const cardSets = await this.bringCardSets(card_current_name, cardId);
+    const response = cardSets.find((card: any) => card.set === new_set_name);
+
+    if (!response) {
+      throw new Error(
+        `No result matching the set ${new_set_name}, please try a different one`,
+      );
+    } else {
+      const updatedCard = this.repo.updateCardImageAndSet(
+        cardId,
+        new_image_url,
+        new_set_name,
+      );
+      return updatedCard;
+    }
+
+    // const updatedCard = await this.repo.updateCardImageAndSet(data);
+    // return updatedCard;
   }
 }
