@@ -266,6 +266,18 @@ export class CardsService {
     return cards;
   }
 
+  async findCardsToExport(id: string) {
+    // Check if deck exists before searching for it
+    const deckExists = await this.deckRepo.findDeckById(id);
+
+    if (deckExists == null) {
+      throw new Error("Deck not found");
+    }
+
+    const cards = await this.repo.findCardsToExport(id);
+    return cards;
+  }
+
   async updateAllCardsOwnership(deckId: string, own: boolean) {
     const deckExists = await this.deckRepo.findDeckById(deckId);
 

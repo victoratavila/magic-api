@@ -24,6 +24,8 @@ import {
   normalizeAndMergeDuplicates,
   BulkCardLine,
 } from "../dtos/bulk.add.dto";
+import { CardsRepository } from "../repositories/cards.repository";
+import { CardsService } from "./cards.services";
 
 export type BulkAddRequest = {
   deckId: string;
@@ -142,7 +144,10 @@ async function fetchImageUrlByName(name: string): Promise<string | null> {
 }
 
 export class DeckService {
-  constructor(private repo: DeckRepository) {}
+  constructor(
+    private repo: DeckRepository,
+    private card_service: CardsService,
+  ) {}
 
   findAllDecks() {
     return this.repo.findAllDecks();
@@ -301,5 +306,15 @@ export class DeckService {
 
   async setCommanderCard(deckId: string, card_id: string) {
     return this.repo.setCommanderCard(deckId, card_id);
+  }
+
+  async exportCardList(deckId: string) {
+    const cardList = await this.card_service.findCardsToExport(deckId);
+
+    const text = cardList
+      .map((c: any) => `${c.amount} ${c.name} [${String(c.set).toLowerCase()}]`)
+      .join("\n");
+
+    return text;
   }
 }
