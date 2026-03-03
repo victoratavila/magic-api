@@ -27,6 +27,9 @@ export function cardsRoutes() {
   router.delete("/:id", cardsController.delete); // Delete card by id
   router.get("/filter", cardsController.findByFilter); // Search cards by deck, ownership status and card name
   router.put("/bulk/update", cardsController.updateAllCardsOwnership);
+  router.get("/bring/sets", cardsController.bringCardSets);
+  router.get("/sets", cardsController.bringCardSets);
+  router.put("/sets/update", cardsController.updateSetAndImageUrl);
 
   // Deck Routes
   router.get("/decks", decksController.list);

@@ -7,7 +7,8 @@ import { DeckService } from "../services/decks.services";
 import { deckIdParamSchema } from "../dtos/deck.id.dto";
 import { errorClass } from "../utils/errorClass";
 import { searchFilter } from "../dtos/search.filter.dto";
-import { boolean } from "zod/v4";
+import { boolean, success } from "zod/v4";
+import { updateImageAndSetDTO } from "../dtos/update.image.and.set.dto";
 
 const updateAllSchema = z.object({
   deckId: z.string().uuid(),
@@ -100,7 +101,7 @@ export class CardsController {
       });
     } else {
       // Check if card exists
-      const card = await this.service.findById(id);
+      const card = await this.service.findCardById(id);
       if (card == null || card == undefined) {
         return res.status(404).json({
           error: `No card was found matching the id ${id}`,
@@ -124,7 +125,7 @@ export class CardsController {
     } else {
       try {
         // Check if card exists
-        const card = await this.service.findById(id);
+        const card = await this.service.findCardById(id);
 
         if (card == null || card == undefined) {
           return res.status(404).json({
@@ -268,6 +269,60 @@ export class CardsController {
       return res.status(500).json({
         error: "Internal error",
       });
+    }
+  };
+
+  bringCardSets = async (req: Request, res: Response) => {
+    const result = updateImageAndSetDTO.safeParse(req.query);
+
+    if (!result.success) {
+      res.status(400).json({
+        Error: result.error,
+      });
+    } else {
+      const { card_current_name, card_id } = result.data;
+      try {
+        const updatedCard = await this.service.bringCardSets(
+          card_current_name,
+          card_id,
+        );
+
+        return res.status(200).json(updatedCard);
+      } catch (err: any) {
+        return res.status(400).json({
+          success: false,
+          error: "Unable to proceed, please try again",
+          details: { code: err.code, message: err.message },
+        });
+      }
+    }
+  };
+
+  updateSetAndImageUrl = async (req: Request, res: Response) => {
+    const result = updateImageAndSetDTO.safeParse(req.body);
+
+    try {
+      if (!result.success) {
+        res.status(400).json({
+          Error: result.error,
+        });
+      } else {
+        const { card_current_name, card_id, new_set_name, new_image_url } =
+          result.data;
+        const updatedCard = await this.service.updateSetAndImageUrl(
+          card_current_name,
+          card_id,
+          new_set_name,
+          new_image_url,
+        );
+        return res.json(updatedCard);
+      }
+    } catch (err: any) {
+      if (err.message) {
+        res.status(500).json({
+          Error: err.message,
+        });
+      }
     }
   };
 }
