@@ -122,10 +122,40 @@ export class CardsRepository {
     });
   }
 
-  async findCardsToExport(deckId: string) {
+  async exportAllCards(deckId: string) {
     const cards = await prisma.card.groupBy({
       by: ["name", "set"],
       where: { deckId },
+      _count: { _all: true },
+      orderBy: { name: "asc" },
+    });
+
+    return cards.map((row) => ({
+      name: row.name,
+      set: row.set,
+      amount: row._count._all,
+    }));
+  }
+
+  async exportAllOwnCards(deckId: string) {
+    const cards = await prisma.card.groupBy({
+      by: ["name", "set"],
+      where: { deckId, own: true },
+      _count: { _all: true },
+      orderBy: { name: "asc" },
+    });
+
+    return cards.map((row) => ({
+      name: row.name,
+      set: row.set,
+      amount: row._count._all,
+    }));
+  }
+
+  async exportAllMissingCards(deckId: string) {
+    const cards = await prisma.card.groupBy({
+      by: ["name", "set"],
+      where: { deckId, own: false },
       _count: { _all: true },
       orderBy: { name: "asc" },
     });

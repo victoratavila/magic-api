@@ -266,7 +266,7 @@ export class CardsService {
     return cards;
   }
 
-  async findCardsToExport(id: string) {
+  async findCardsToExport(id: string, filter: string) {
     // Check if deck exists before searching for it
     const deckExists = await this.deckRepo.findDeckById(id);
 
@@ -274,8 +274,20 @@ export class CardsService {
       throw new Error("Deck not found");
     }
 
-    const cards = await this.repo.findCardsToExport(id);
-    return cards;
+    if (filter == "all") {
+      const cards = await this.repo.exportAllCards(id);
+      return cards;
+    }
+
+    if (filter == "own") {
+      const cards = await this.repo.exportAllOwnCards(id);
+      return cards;
+    }
+
+    if (filter == "missing") {
+      const cards = await this.repo.exportAllMissingCards(id);
+      return cards;
+    }
   }
 
   async updateAllCardsOwnership(deckId: string, own: boolean) {

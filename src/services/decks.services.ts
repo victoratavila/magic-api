@@ -308,13 +308,20 @@ export class DeckService {
     return this.repo.setCommanderCard(deckId, card_id);
   }
 
-  async exportCardList(deckId: string) {
-    const cardList = await this.card_service.findCardsToExport(deckId);
+  async exportCardList(deckId: string, filter: string) {
+    try {
+      const cardList =
+        (await this.card_service.findCardsToExport(deckId, filter)) ?? [];
 
-    const text = cardList
-      .map((c: any) => `${c.amount} ${c.name} [${String(c.set).toLowerCase()}]`)
-      .join("\n");
+      const text = cardList
+        .map((c) => `${c.amount} ${c.name} [${String(c.set).toLowerCase()}]`)
+        .join("\n");
 
-    return text;
+      return text;
+    } catch (err: any) {
+      if (err) {
+        throw new Error(err);
+      }
+    }
   }
 }
