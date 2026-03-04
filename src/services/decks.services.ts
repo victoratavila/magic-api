@@ -5,6 +5,7 @@ import {
 } from "../repositories/decks.repository";
 import { createDeckDTO } from "../dtos/deck.dto";
 import z from "zod";
+import createError from "http-errors";
 
 export class DeckLimitExceededError extends Error {
   constructor(
@@ -304,8 +305,33 @@ export class DeckService {
     return base;
   }
 
+  async isCardLegendary(cardId: string) {
+    const card = await this.card_service.findCardById(cardId);
+    if (card == null) {
+      throw new Error("Card not found");
+    } else {
+      const url = `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(card.name)}`;
+      const response = await fetch(url);
+      const data = await response.json();
+      if (data.type_line.includes("Legendary")) {
+        return true;
+      }
+
+      return false;
+    }
+  }
+
   async setCommanderCard(deckId: string, card_id: string) {
-    return this.repo.setCommanderCard(deckId, card_id);
+    const isLegendary = await this.isCardLegendary(card_id);
+
+    if (!isLegendary) {
+      throw createError(
+        400,
+        "Card should be Legendary to be set as the deck commander",
+      );
+    } else {
+      return this.repo.setCommanderCard(deckId, card_id);
+    }
   }
 
   async exportCardList(deckId: string, filter: string) {
