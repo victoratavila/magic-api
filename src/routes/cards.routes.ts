@@ -44,7 +44,7 @@ export function cardsRoutes() {
   router.put("/update/deck", decksController.updateDeckInfo);
   router.post("/:deckId/bulk", decksController.bulkAddCards);
   router.put("/set/commander", decksController.setCommanderCard);
-  router.get("/export/:deckId", decksController.exportCardList);
+  router.get("/export", decksController.exportCardList);
 
   return router;
 }

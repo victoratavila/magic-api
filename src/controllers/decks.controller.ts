@@ -6,6 +6,7 @@ import z from "zod";
 import { updateDeckDTO } from "../dtos/update.deck.dto";
 import { DeckLimitExceededError } from "../services/decks.services";
 import { CardsService } from "../services/cards.services";
+import { exportCardsFilter } from "../dtos/export.cards.filter.dto";
 
 const bodySchema = z.object({
   bulkText: z.string().min(1),
@@ -253,15 +254,27 @@ export class DeckController {
       deckId: z.string().uuid(),
     });
 
-    const result = schema.safeParse(req.params);
+    const id = schema.safeParse(req.query);
+    const filter = exportCardsFilter.safeParse(req.query);
 
-    if (!result.success) {
-      return res.status(400).json({ error: "Please provide a valid uuid" });
+    if (!id.success) {
+      return res
+        .status(400)
+        .json({ error: "Please provide a valid uuid", details: id.error });
     }
 
-    const { deckId } = result.data;
+    if (!filter.success) {
+      return res
+        .status(400)
+        .json({ error: "Please provide ?filter=all|own|missing" });
+    }
 
-    const exportCardList = await this.service.exportCardList(deckId);
+    const { deckId } = id.data;
+
+    const exportCardList = await this.service.exportCardList(
+      deckId,
+      filter.data.filter,
+    );
     res.type("text/plain").send(exportCardList);
   };
 }
