@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
 import { DeckService } from "../services/decks.services";
 import { createDeckDTO } from "../dtos/deck.dto";
 import { deckIdParamSchema } from "../dtos/deck.id.dto";
@@ -182,70 +182,75 @@ export class DeckController {
     }
   };
 
-  setCommanderCard = async (req: Request, res: Response) => {
-    if (req.query.deckId == undefined || req.query.cardId == undefined) {
-      return res.status(400).json({
-        Error: "please provide deckId and cardId to set the commander card",
-      });
-    }
-
+  setCommanderCard = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
     try {
-      let deckId = z.string().uuid().safeParse(req.query.deckId);
-      let cardId = z.string().uuid().safeParse(req.query.cardId);
+      const { deckId, cardId } = req.query;
 
-      if (deckId.success != true || cardId.success != true) {
-        return res.json({ deckId, cardId });
-      }
-
-      let deckIdParsed = req.query.deckId as string;
-      let cardIdParsed = req.query.cardId as string;
-
-      // Check if deck and card exists
-      const deckExists = await this.service.findDeckById(deckIdParsed);
-      const cardExists = await this.card_service.findCardById(cardIdParsed);
-
-      // Check if deck and card exist in the system
-      if (deckExists == null || cardExists == null) {
-        return res.status(404).json({
-          Error: "no deck or card found based on the provided ids",
+      if (!deckId || !cardId) {
+        return res.status(400).json({
+          success: false,
+          error: "please provide deckId and cardId to set the commander card",
         });
       }
 
-      // Checking if the card chosen as the commander belongs to the deck
-      if (cardExists?.deckId != deckIdParsed) {
-        return res.status(403).json({
-          Error:
-            "you can't set a commander deck if it does not belong to this deck",
-          data: {
-            deck_card_already_belongs_to: deckExists,
+      const deckIdParsed = z.string().uuid().safeParse(deckId);
+      const cardIdParsed = z.string().uuid().safeParse(cardId);
+
+      if (!deckIdParsed.success || !cardIdParsed.success) {
+        return res.status(400).json({
+          success: false,
+          error: "Invalid deckId or cardId",
+          details: {
+            deckId: deckIdParsed.success
+              ? undefined
+              : deckIdParsed.error.format(),
+            cardId: cardIdParsed.success
+              ? undefined
+              : cardIdParsed.error.format(),
           },
         });
       }
 
-      try {
-        const setCommanderCard = this.service.setCommanderCard(
-          deckIdParsed,
-          cardIdParsed,
-        );
+      // Check if deck and card exists
+      const deck = await this.service.findDeckById(deckIdParsed.data);
+      const card = await this.card_service.findCardById(cardIdParsed.data);
 
-        return res.json({
-          deck_id: deckIdParsed,
-          deck_name: deckExists?.name,
-          commander_id: cardIdParsed,
-          commander_name: cardExists?.name,
-        });
-      } catch (err) {
-        return res.status(400).json({
-          error: err,
+      if (!deck || !card) {
+        return res.status(404).json({
+          success: false,
+          error: "no deck or card found based on the provided ids",
         });
       }
 
-      res.json({ deckExists, cardExists });
-    } catch (err) {
-      return res.status(400).json({
-        error: "Deck cards limit exceeded.",
-        details: err,
+      // Checking if the card chosen as the commander belongs to the deck
+      if (card.deckId !== deckIdParsed.data) {
+        return res.status(403).json({
+          success: false,
+          error:
+            "you can't set a commander card if it does not belong to this deck",
+          data: {
+            card_deck_id: card.deckId,
+            requested_deck_id: deckIdParsed.data,
+          },
+        });
+      }
+
+      // IMPORTANT: await + let errors bubble to error middleware via next(err)
+      const result = await this.service.setCommanderCard(
+        deckIdParsed.data,
+        cardIdParsed.data,
+      );
+
+      return res.status(200).json({
+        success: true,
+        data: result,
       });
+    } catch (err) {
+      return res.status(400).json(err);
     }
   };
 
