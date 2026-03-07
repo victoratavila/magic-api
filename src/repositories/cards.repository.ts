@@ -44,22 +44,41 @@ export class CardsRepository {
     deckId: string,
     name: string | undefined,
     own: boolean,
+    page: number,
+    limit: number,
   ) {
-    return await prisma.card.findMany({
-      orderBy: { id: "asc" },
-      where: {
-        deckId,
-        own,
-        ...(name && name.trim()
-          ? {
-              name: {
-                contains: name.trim(),
-                mode: "insensitive",
-              },
-            }
-          : {}),
-      },
-    });
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.CardWhereInput = {
+      deckId,
+      own,
+      ...(name?.trim()
+        ? {
+            name: {
+              contains: name.trim(),
+              mode: "insensitive",
+            },
+          }
+        : {}),
+    };
+
+    const [cards, total] = await prisma.$transaction([
+      prisma.card.findMany({
+        where,
+        orderBy: { id: "asc" },
+        skip,
+        take: limit,
+      }),
+      prisma.card.count({ where }),
+    ]);
+
+    return {
+      data: cards,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async bulkAddCards(cards: CreateCardInput[]) {
@@ -68,21 +87,43 @@ export class CardsRepository {
     });
   }
 
-  findByName(deckId: string, name?: string) {
-    return prisma.card.findMany({
-      where: {
-        deckId,
-        ...(name?.trim()
-          ? {
-              name: {
-                contains: name.trim(),
-                mode: "insensitive",
-              },
-            }
-          : {}),
-      },
-      orderBy: { name: "asc" },
-    });
+  async findByName(
+    deckId: string,
+    name: string | undefined,
+    page: number,
+    limit: number,
+  ) {
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.CardWhereInput = {
+      deckId,
+      ...(name?.trim()
+        ? {
+            name: {
+              contains: name.trim(),
+              mode: "insensitive",
+            },
+          }
+        : {}),
+    };
+
+    const [cards, total] = await prisma.$transaction([
+      prisma.card.findMany({
+        where,
+        orderBy: { name: "asc" },
+        skip,
+        take: limit,
+      }),
+      prisma.card.count({ where }),
+    ]);
+
+    return {
+      data: cards,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async findCardById(id: string) {
@@ -113,13 +154,35 @@ export class CardsRepository {
   async deleteAllCards() {
     return prisma.card.deleteMany({});
   }
+  // repository
+  async findCardsByDeck(deckId: string, page: number, limit: number) {
+    const skip = (page - 1) * limit;
 
-  async findCardsByDeck(deckId: string) {
-    return await prisma.card.findMany({
-      where: {
-        deckId: deckId,
-      },
-    });
+    const [cards, total] = await prisma.$transaction([
+      prisma.card.findMany({
+        where: {
+          deckId,
+        },
+        skip,
+        take: limit,
+        orderBy: {
+          createdAt: "desc",
+        },
+      }),
+      prisma.card.count({
+        where: {
+          deckId,
+        },
+      }),
+    ]);
+
+    return {
+      data: cards,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async exportAllCards(deckId: string) {

@@ -141,29 +141,43 @@ export class CardsService {
     deckId: string,
     name: string | undefined,
     filter: CardFilter,
+    page: number,
+    limit: number,
   ) {
-    if (filter == "all") {
-      const cards = await this.repo.findByName(deckId, name);
-      const commander_card_id = await this.deckRepo.findCommanderCardId(deckId);
-
-      const data = { commander_card_id, cards };
-      return data;
-    }
-
-    if (filter == "own") {
-      const cards = await this.repo.findByNameAndOwnership(deckId, name, true);
-      const commander_card_id = await this.deckRepo.findCommanderCardId(deckId);
-
-      const data = { commander_card_id, cards };
-      return data;
-    }
-
-    // missing
-    const cards = await this.repo.findByNameAndOwnership(deckId, name, false);
     const commander_card_id = await this.deckRepo.findCommanderCardId(deckId);
 
-    const data = { commander_card_id, cards };
-    return data;
+    let cards;
+
+    if (filter === "all") {
+      cards = await this.repo.findByName(deckId, name, page, limit);
+    } else if (filter === "own") {
+      cards = await this.repo.findByNameAndOwnership(
+        deckId,
+        name,
+        true,
+        page,
+        limit,
+      );
+    } else {
+      cards = await this.repo.findByNameAndOwnership(
+        deckId,
+        name,
+        false,
+        page,
+        limit,
+      );
+    }
+
+    return {
+      commander_card_id,
+      pagination: {
+        total: cards.total,
+        page: cards.page,
+        limit: cards.limit,
+        totalPages: cards.totalPages,
+      },
+      data: cards.data,
+    };
   }
 
   findByOwnership(status: boolean) {
@@ -179,8 +193,8 @@ export class CardsService {
     return check;
   }
 
-  findByName(deckId: string, name: string) {
-    return this.repo.findByName(deckId, name);
+  findByName(deckId: string, name: string, page: number, limit: number) {
+    return this.repo.findByName(deckId, name, page, limit);
   }
 
   deleteCard(id: string) {
@@ -254,7 +268,7 @@ export class CardsService {
     return this.repo.createCard(payload);
   }
 
-  async findCardsByDeck(id: string) {
+  async findCardsByDeck(id: string, page: number, limit: number) {
     // Check if deck exists before searching for it
     const deckExists = await this.deckRepo.findDeckById(id);
 
@@ -262,7 +276,7 @@ export class CardsService {
       throw new Error("Deck not found");
     }
 
-    const cards = await this.repo.findCardsByDeck(id);
+    const cards = await this.repo.findCardsByDeck(id, page, limit);
     return cards;
   }
 
