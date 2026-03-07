@@ -25,23 +25,57 @@ export class CardsController {
     const cardList = await this.service.findAll();
     return res.json(cardList);
   };
-
+  // controller
   findCardsByDeck = async (req: Request, res: Response) => {
     try {
       const { deckId } = deckIdParamSchema.parse(req.params);
+      const { page, limit } = req.query;
+
+      if (page == null || limit == null) {
+        return res.status(400).json({
+          success: false,
+          error: "please provide page and limit",
+        });
+      }
+
+      const pageNumber = Number(page);
+      const limitNumber = Number(limit);
+
+      if (
+        !Number.isInteger(pageNumber) ||
+        !Number.isInteger(limitNumber) ||
+        pageNumber < 1 ||
+        limitNumber < 1
+      ) {
+        return res.status(400).json({
+          success: false,
+          error: "page and limit must be positive integers",
+        });
+      }
+
+      const safeLimit = Math.min(limitNumber, 100);
 
       const cardAmountLimit = (
         await this.deckService.checkMaxCardsandCurrentCards(deckId)
       ).cards_max;
 
-      const cards = await this.service.findCardsByDeck(deckId);
+      const cards = await this.service.findCardsByDeck(
+        deckId,
+        pageNumber,
+        safeLimit,
+      );
 
       return res.status(200).json({
-        deckId: deckId,
         success: true,
+        deckId,
         cards_max: cardAmountLimit,
-        cards_amount: cards.length,
-        cards,
+        pagination: {
+          total: cards.total,
+          page: cards.page,
+          limit: cards.limit,
+          totalPages: cards.totalPages,
+        },
+        data: cards.data,
       });
     } catch (error: any) {
       if (error instanceof z.ZodError) {
@@ -68,13 +102,43 @@ export class CardsController {
   findByFilter = async (req: Request, res: Response) => {
     try {
       const { deckId, name, filter } = searchFilter.parse(req.query);
+      const { page, limit } = req.query;
 
-      const cards = await this.service.findByFilter(deckId, name, filter);
+      if (page == null || limit == null) {
+        return res.status(400).json({
+          error: "please provide page and limit",
+        });
+      }
 
-      return res.status(200).json(cards);
-    } catch {
+      const pageNumber = Number(page);
+      const limitNumber = Number(limit);
+
+      if (
+        !Number.isInteger(pageNumber) ||
+        !Number.isInteger(limitNumber) ||
+        pageNumber < 1 ||
+        limitNumber < 1
+      ) {
+        return res.status(400).json({
+          error: "page and limit must be positive integers",
+        });
+      }
+
+      const safeLimit = Math.min(limitNumber, 100);
+
+      const result = await this.service.findByFilter(
+        deckId,
+        name,
+        filter,
+        pageNumber,
+        safeLimit,
+      );
+
+      return res.status(200).json(result);
+    } catch (err) {
       return res.status(400).json({
-        error: "Use ?deckId=...&filter=all|own|missing&name=optional",
+        error:
+          "Use ?deckId=...&filter=all|own|missing&name=optional&page=1&limit=20",
       });
     }
   };
