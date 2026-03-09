@@ -36,6 +36,7 @@ export function cardsRoutes() {
   router.post("/decks", decksController.create);
   router.get("/find/deck/:deckId", decksController.findDeckById);
   router.get("/decks/:deckId", cardsController.findCardsByDeck);
+  router.get("/decks/stats/:deckId", decksController.deckStats);
   router.delete("/decks/:deckId", decksController.deleteDeck);
   router.delete(
     "/delete/all/deck/:deckId",

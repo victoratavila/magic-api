@@ -152,4 +152,39 @@ export class DeckRepository {
 
     return deck?.commander_card_id ?? null;
   }
+
+  async deckStats(deckId: string) {
+    const [deck, total_cards, owned_cards] = await prisma.$transaction([
+      prisma.deck.findUnique({
+        where: { id: deckId },
+        select: {
+          id: true,
+          name: true,
+          cards_max: true,
+        },
+      }),
+      prisma.card.count({
+        where: { deckId },
+      }),
+      prisma.card.count({
+        where: {
+          deckId,
+          own: true,
+        },
+      }),
+    ]);
+
+    if (!deck) {
+      throw new Error("Deck not found");
+    }
+
+    return {
+      id: deck.id,
+      name: deck.name,
+      cards_max: deck.cards_max,
+      total_cards,
+      owned_cards,
+      missing_cards: total_cards - owned_cards,
+    };
+  }
 }
