@@ -282,4 +282,14 @@ export class DeckController {
     );
     res.type("text/plain").send(exportCardList);
   };
+
+  deckStats = async (req: Request, res: Response) => {
+    try {
+      let deckId = z.string().uuid().parse(req.params.deckId);
+      const deckStats = await this.service.deckStats(deckId);
+      return res.json(deckStats);
+    } catch (err) {
+      res.status(400).json(err);
+    }
+  };
 }

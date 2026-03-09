@@ -350,4 +350,15 @@ export class DeckService {
       }
     }
   }
+
+  async deckStats(deckId: string) {
+    try {
+      const deckStats = await this.repo.deckStats(deckId);
+      return deckStats;
+    } catch (err: any) {
+      if (err) {
+        throw new Error(err);
+      }
+    }
+  }
 }
