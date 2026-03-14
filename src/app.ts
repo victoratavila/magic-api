@@ -5,7 +5,7 @@ import express from "express";
 import cors from "cors";
 import { routes } from "./routes";
 import { testDatabaseConnection } from "./db/prisma";
-import "dotenv/config";
+import dotenv from "dotenv";
 
 export const app = express();
 
@@ -15,6 +15,8 @@ app.use(cors());
 // Parse JSON bodies into req.body
 app.use(express.text({ type: "text/plain", limit: "2mb" }));
 app.use(express.json({ limit: "2mb" }));
+
+dotenv.config();
 
 // Register routes
 app.use(routes);

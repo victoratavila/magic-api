@@ -150,43 +150,43 @@ export class DeckService {
     private card_service: CardsService,
   ) {}
 
-  findAllDecks() {
-    return this.repo.findAllDecks();
+  findAllDecks(userId: string) {
+    return this.repo.findAllDecks(userId);
   }
 
-  async deleteAllCardsFromDeck(deckId: string) {
-    return await this.repo.deleteAllCardsFromDeck(deckId);
+  async deleteAllCardsFromDeck(userId: string, deckId: string) {
+    return await this.repo.deleteAllCardsFromDeck(userId, deckId);
   }
 
-  async deleteDeck(id: string) {
+  async deleteDeck(userId: string, deckId: string) {
     // Check if deck exists before searching for it
-    const deckExists = await this.repo.findDeckById(id);
+    const deckExists = await this.repo.findDeckById(userId, deckId);
 
     if (deckExists == null) {
       throw new Error("Deck not found");
     }
 
-    return this.repo.deleteDeck(id);
+    return this.repo.deleteDeck(userId, deckId);
   }
 
-  createDeck(name: createDeckDTO) {
-    return this.repo.createDeck(name);
+  createDeck(name: createDeckDTO, userId: string) {
+    return this.repo.createDeck(name, userId);
   }
 
   deckAlreadyExists(name: string) {
     return this.repo.deckAlreadyExists(name);
   }
 
-  findDeckById(id: string) {
-    return this.repo.findDeckById(id);
+  findDeckById(userId: string, deckId: string) {
+    return this.repo.findDeckById(userId, deckId);
   }
 
   checkMaxCardsandCurrentCards(deckId: string) {
     return this.repo.checkMaxCardsandCurrentCards(deckId);
   }
 
-  updateDeckInfo(id: string, data: UpdateDeckData) {
-    return this.repo.updateDeckInfo(id, data);
+  updateDeckInfo(userId: string, id: string, data: UpdateDeckData) {
+    return this.repo.updateDeckInfo(userId, id, data);
   }
 
   async bulkAddCards(
@@ -334,10 +334,11 @@ export class DeckService {
     }
   }
 
-  async exportCardList(deckId: string, filter: string) {
+  async exportCardList(userId: string, deckId: string, filter: string) {
     try {
       const cardList =
-        (await this.card_service.findCardsToExport(deckId, filter)) ?? [];
+        (await this.card_service.findCardsToExport(userId, deckId, filter)) ??
+        [];
 
       const text = cardList
         .map((c) => `${c.amount} ${c.name} [${String(c.set).toLowerCase()}]`)
@@ -351,9 +352,9 @@ export class DeckService {
     }
   }
 
-  async deckStats(deckId: string) {
+  async deckStats(userId: string, deckId: string) {
     try {
-      const deckStats = await this.repo.deckStats(deckId);
+      const deckStats = await this.repo.deckStats(userId, deckId);
       return deckStats;
     } catch (err: any) {
       if (err) {

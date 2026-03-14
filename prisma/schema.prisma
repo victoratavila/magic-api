@@ -27,6 +27,7 @@ model Card {
 
 model Deck {
   id        String @id @default(uuid())
+  user_id String
   name      String
   cards_max Int
   commander_card_id  String?
@@ -39,3 +40,32 @@ model Deck {
   @@map("Deck")
 }
 
+enum Role {
+  user
+  admin
+}
+
+model User {
+  id        String @id @default(uuid())
+  username  String
+  role      Role   @default(user)
+  email     String @unique
+  password  String
+
+  passwordResetTokens PasswordResetToken[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
+}
