@@ -39,7 +39,7 @@ export function cardsRoutes() {
   );
   router.post("/auth/login", usersController.validateUser);
   router.post("/forgot-password", pwrResetController.forgotPassword);
-  router.post("/reset-password", pwrResetController.resetPassword);
+  router.post("/complete/reset-password", pwrResetController.resetPassword);
 
   // Card Routes
   router.post("/", authMiddleware, cardsController.create); // Create
@@ -74,7 +74,7 @@ export function cardsRoutes() {
     decksController.deleteAllCardsFromDeck,
   );
   router.put("/update/deck", authMiddleware, decksController.updateDeckInfo);
-  router.post("/:deckId/bulk", decksController.bulkAddCards);
+  router.post("/:deckId/bulk", authMiddleware, decksController.bulkAddCards);
   router.put(
     "/set/commander",
     authMiddleware,

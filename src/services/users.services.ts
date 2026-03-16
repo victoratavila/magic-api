@@ -46,7 +46,7 @@ export class UserService {
               role: userFound.role,
             },
             secret,
-            { expiresIn: "1h" },
+            { expiresIn: "48h" },
           );
 
           return {

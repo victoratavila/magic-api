@@ -1,12 +1,8 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
-interface AuthRequest extends Request {
-  user?: string | jwt.JwtPayload;
-}
-
 export const authMiddleware = (
-  req: AuthRequest,
+  req: Request,
   res: Response,
   next: NextFunction,
 ) => {
@@ -20,20 +16,31 @@ export const authMiddleware = (
 
   const [, token] = authHeader.split(" ");
 
+  const secret = process.env.JWT_SECRET;
+
+  if (!secret) {
+    return res.status(500).json({
+      message: "JWT secret not configured",
+    });
+  }
+
+  if (!token) {
+    return res.status(401).json({
+      message: "Token not provided",
+    });
+  }
+
   try {
-    const secret = process.env.JWT_SECRET;
-
-    if (!secret) {
-      throw new Error("JWT_SECRET_NOT_DEFINED");
-    }
-
-    if (!token) {
-      throw new Error("TOKEN_NOT_DEFINED");
-    }
-
-    const decoded = jwt.verify(token, secret);
+    const decoded = jwt.verify(token, secret) as {
+      sub: string;
+      email: string;
+      role: string;
+      iat?: number;
+      exp?: number;
+    };
 
     req.user = decoded;
+
     next();
   } catch {
     return res.status(401).json({

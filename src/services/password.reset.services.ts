@@ -43,9 +43,13 @@ export class PasswordResetService {
       expiresAt,
     });
 
-    const resetLink = `${process.env.APP_URL}/reset-password?token=${token}`;
-
-    await sendResetPasswordEmail(user.email, resetLink);
+    if (process.env.DEV_ENV == "true") {
+      const resetLink = `http://127.0.0.1:5500/mtg-collection-full.html?token=${token}`;
+      await sendResetPasswordEmail(user.email, resetLink);
+    } else {
+      const resetLink = `https://magic-app.domainfortraining.xyz/reset-password?token=${token}`;
+      await sendResetPasswordEmail(user.email, resetLink);
+    }
   }
 
   /**

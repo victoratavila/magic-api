@@ -65,7 +65,7 @@ export class CardsRepository {
     const [cards, total] = await prisma.$transaction([
       prisma.card.findMany({
         where,
-        orderBy: { id: "asc" },
+        orderBy: { name: "asc" },
         skip,
         take: limit,
       }),

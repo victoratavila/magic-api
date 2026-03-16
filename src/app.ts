@@ -7,6 +7,8 @@ import { routes } from "./routes";
 import { testDatabaseConnection } from "./db/prisma";
 import dotenv from "dotenv";
 
+dotenv.config();
+
 export const app = express();
 
 // Allow requests from other origins (frontends, tools, etc.)
@@ -15,8 +17,6 @@ app.use(cors());
 // Parse JSON bodies into req.body
 app.use(express.text({ type: "text/plain", limit: "2mb" }));
 app.use(express.json({ limit: "2mb" }));
-
-dotenv.config();
 
 // Register routes
 app.use(routes);
