@@ -7,6 +7,7 @@ import { updateDeckDTO } from "../dtos/update.deck.dto";
 import { DeckLimitExceededError } from "../services/decks.services";
 import { CardsService } from "../services/cards.services";
 import { exportCardsFilter } from "../dtos/export.cards.filter.dto";
+import { use } from "react";
 
 const bodySchema = z.object({
   bulkText: z.string().min(1),
@@ -21,31 +22,63 @@ export class DeckController {
   ) {}
 
   list = async (req: Request, res: Response) => {
-    const deckList = await this.service.findAllDecks();
-    return res.json(deckList);
+    if (!req.user) {
+      res.status(403).json({
+        Error: "Access denied",
+        Reason: "No userId provided",
+      });
+    } else {
+      const userId = req.user.sub;
+      const deckList = await this.service.findAllDecks(userId);
+
+      return res.json(deckList);
+    }
   };
 
   deleteAllCardsFromDeck = async (req: Request, res: Response) => {
-    try {
-      const { deckId } = deckIdParamSchema.parse(req.params);
+    if (!req.user) {
+      res.status(403).json({
+        Error: "Access denied",
+        Reason: "No userId provided",
+      });
+    } else {
+      try {
+        const { deckId } = deckIdParamSchema.parse(req.params);
+        const userId = req.user.sub;
 
-      if (!deckId) {
-        res.status(400).json({ Error: "please provide deckId" });
-      } else {
-        const deletedCards = await this.service.deleteAllCardsFromDeck(deckId);
+        if (!deckId) {
+          res.status(400).json({ Error: "please provide deckId" });
+        } else {
+          // Check if the deck belongs to the logged users
+          const deckBelongsToUser = await this.service.findDeckById(
+            userId,
+            deckId,
+          );
 
-        return res.status(200).json({
-          success: true,
-          message: "All deck cards successfully deleted",
-          deleted: deletedCards,
-        });
-      }
-    } catch (error: any) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({
-          success: false,
-          error: "Invalid deckId format",
-        });
+          if (deckBelongsToUser != null) {
+            const deletedCards = await this.service.deleteAllCardsFromDeck(
+              userId,
+              deckId,
+            );
+
+            return res.status(200).json({
+              success: true,
+              message: "All deck cards successfully deleted",
+              deleted: deletedCards,
+            });
+          } else {
+            res.status(403).json({
+              Error: "Action not permitted, deck does not belong to user",
+            });
+          }
+        }
+      } catch (error: any) {
+        if (error instanceof z.ZodError) {
+          return res.status(400).json({
+            success: false,
+            error: "Invalid deckId format",
+          });
+        }
       }
     }
   };
@@ -53,13 +86,19 @@ export class DeckController {
   deleteDeck = async (req: Request, res: Response) => {
     const { deckId } = req.params;
 
+    // Getting user id
+    if (!req.user) {
+      throw new Error("User not authenticated");
+    }
+    const userId = req.user.sub;
+
     if (!deckId) {
       res.status(400).json({
         Error: "Please provide the id of the deck you would like to delete",
       });
     } else {
       try {
-        const deletedDeck = await this.service.deleteDeck(deckId);
+        const deletedDeck = await this.service.deleteDeck(userId, deckId);
         return res.json(deletedDeck);
       } catch (error: any) {
         if (error.message === "Deck not found") {
@@ -75,6 +114,12 @@ export class DeckController {
   create = async (req: Request, res: Response) => {
     const data = createDeckDTO.safeParse(req.body);
 
+    // Getting user id
+    if (!req.user) {
+      throw new Error("User not authenticated");
+    }
+    const userId = req.user.sub;
+
     if (data.error) {
       res.status(400).json(data.error);
     } else {
@@ -87,7 +132,7 @@ export class DeckController {
           error: `Deck ${data.data.name} already exists`,
         });
       } else {
-        const createdDeck = await this.service.createDeck(data.data);
+        const createdDeck = await this.service.createDeck(data.data, userId);
         res.status(201).json({
           success: `Deck ${data.data.name} successfully registered`,
           deckData: createdDeck,
@@ -102,28 +147,45 @@ export class DeckController {
   };
 
   findDeckById = async (req: Request, res: Response) => {
-    try {
-      let deckId = z.string().uuid().parse(req.params.deckId);
-      const findDeckById = await this.service.findDeckById(deckId);
-      return res.json(findDeckById);
-    } catch (err) {
-      res.status(400).json(err);
+    if (!req.user) {
+      res.status(403).json({
+        Error: "Access denied",
+        Reason: "No userId provided",
+      });
+    } else {
+      const userId = req.user.sub;
+
+      try {
+        let deckId = z.string().uuid().parse(req.params.deckId);
+        const findDeckById = await this.service.findDeckById(userId, deckId);
+        return res.json(findDeckById);
+      } catch (err) {
+        res.status(400).json(err);
+      }
     }
   };
 
   updateDeckInfo = async (req: Request, res: Response) => {
     try {
-      const { deckId, name, cards_max } = updateDeckDTO.parse(req.body);
-      const deck = await this.service.findDeckById(deckId);
+      if (!req.user) {
+        res.status(403).json({
+          Error: "Access denied",
+          Reason: "No userId provided",
+        });
+      } else {
+        const { deckId, name, cards_max } = updateDeckDTO.parse(req.body);
+        const userId = req.user.sub;
+        const deck = await this.service.findDeckById(userId, deckId);
 
-      if (!deck) return res.status(404).json({ message: "Deck not found" });
+        if (!deck) return res.status(404).json({ message: "Deck not found" });
 
-      const data: { name?: string; cards_max?: number } = {};
-      if (name !== undefined) data.name = name;
-      if (cards_max !== undefined) data.cards_max = cards_max;
+        const data: { name?: string; cards_max?: number } = {};
+        if (name !== undefined) data.name = name;
+        if (cards_max !== undefined) data.cards_max = cards_max;
 
-      const updated = await this.service.updateDeckInfo(deckId, data);
-      return res.status(200).json(updated);
+        const updated = await this.service.updateDeckInfo(userId, deckId, data);
+        return res.status(200).json(updated);
+      }
     } catch (err: any) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: err.message });
@@ -187,109 +249,134 @@ export class DeckController {
     res: Response,
     next: NextFunction,
   ) => {
-    try {
-      const { deckId, cardId } = req.query;
-
-      if (!deckId || !cardId) {
-        return res.status(400).json({
-          success: false,
-          error: "please provide deckId and cardId to set the commander card",
-        });
-      }
-
-      const deckIdParsed = z.string().uuid().safeParse(deckId);
-      const cardIdParsed = z.string().uuid().safeParse(cardId);
-
-      if (!deckIdParsed.success || !cardIdParsed.success) {
-        return res.status(400).json({
-          success: false,
-          error: "Invalid deckId or cardId",
-          details: {
-            deckId: deckIdParsed.success
-              ? undefined
-              : deckIdParsed.error.format(),
-            cardId: cardIdParsed.success
-              ? undefined
-              : cardIdParsed.error.format(),
-          },
-        });
-      }
-
-      // Check if deck and card exists
-      const deck = await this.service.findDeckById(deckIdParsed.data);
-      const card = await this.card_service.findCardById(cardIdParsed.data);
-
-      if (!deck || !card) {
-        return res.status(404).json({
-          success: false,
-          error: "no deck or card found based on the provided ids",
-        });
-      }
-
-      // Checking if the card chosen as the commander belongs to the deck
-      if (card.deckId !== deckIdParsed.data) {
-        return res.status(403).json({
-          success: false,
-          error:
-            "you can't set a commander card if it does not belong to this deck",
-          data: {
-            card_deck_id: card.deckId,
-            requested_deck_id: deckIdParsed.data,
-          },
-        });
-      }
-
-      // IMPORTANT: await + let errors bubble to error middleware via next(err)
-      const result = await this.service.setCommanderCard(
-        deckIdParsed.data,
-        cardIdParsed.data,
-      );
-
-      return res.status(200).json({
-        success: true,
-        data: result,
+    if (!req.user) {
+      res.status(403).json({
+        Error: "Access denied",
+        Reason: "No userId provided",
       });
-    } catch (err) {
-      return res.status(400).json(err);
+    } else {
+      try {
+        const { deckId, cardId } = req.query;
+        const userId = req.user.sub;
+
+        if (!deckId || !cardId) {
+          return res.status(400).json({
+            success: false,
+            error: "please provide deckId and cardId to set the commander card",
+          });
+        }
+
+        const deckIdParsed = z.string().uuid().safeParse(deckId);
+        const cardIdParsed = z.string().uuid().safeParse(cardId);
+
+        if (!deckIdParsed.success || !cardIdParsed.success) {
+          return res.status(400).json({
+            success: false,
+            error: "Invalid deckId or cardId",
+            details: {
+              deckId: deckIdParsed.success
+                ? undefined
+                : deckIdParsed.error.format(),
+              cardId: cardIdParsed.success
+                ? undefined
+                : cardIdParsed.error.format(),
+            },
+          });
+        }
+
+        // Check if deck and card exists
+        const deck = await this.service.findDeckById(userId, deckIdParsed.data);
+        const card = await this.card_service.findCardById(cardIdParsed.data);
+
+        if (!deck || !card) {
+          return res.status(404).json({
+            success: false,
+            error: "no deck or card found based on the provided ids",
+          });
+        }
+
+        // Checking if the card chosen as the commander belongs to the deck
+        if (card.deckId !== deckIdParsed.data) {
+          return res.status(403).json({
+            success: false,
+            error:
+              "you can't set a commander card if it does not belong to this deck",
+            data: {
+              card_deck_id: card.deckId,
+              requested_deck_id: deckIdParsed.data,
+            },
+          });
+        }
+
+        // IMPORTANT: await + let errors bubble to error middleware via next(err)
+        const result = await this.service.setCommanderCard(
+          deckIdParsed.data,
+          cardIdParsed.data,
+        );
+
+        return res.status(200).json({
+          success: true,
+          data: result,
+        });
+      } catch (err) {
+        return res.status(400).json(err);
+      }
     }
   };
 
   exportCardList = async (req: Request, res: Response) => {
-    const schema = z.object({
-      deckId: z.string().uuid(),
-    });
+    if (!req.user) {
+      res.status(403).json({
+        Error: "Access denied",
+        Reason: "No userId provided",
+      });
+    } else {
+      const userId = req.user.sub;
+      const schema = z.object({
+        deckId: z.string().uuid(),
+      });
 
-    const id = schema.safeParse(req.query);
-    const filter = exportCardsFilter.safeParse(req.query);
+      const id = schema.safeParse(req.query);
+      const filter = exportCardsFilter.safeParse(req.query);
 
-    if (!id.success) {
-      return res
-        .status(400)
-        .json({ error: "Please provide a valid uuid", details: id.error });
+      if (!id.success) {
+        return res
+          .status(400)
+          .json({ error: "Please provide a valid uuid", details: id.error });
+      }
+
+      if (!filter.success) {
+        return res
+          .status(400)
+          .json({ error: "Please provide ?filter=all|own|missing" });
+      }
+
+      const { deckId } = id.data;
+
+      const exportCardList = await this.service.exportCardList(
+        userId,
+        deckId,
+        filter.data.filter,
+      );
+      res.type("text/plain").send(exportCardList);
     }
-
-    if (!filter.success) {
-      return res
-        .status(400)
-        .json({ error: "Please provide ?filter=all|own|missing" });
-    }
-
-    const { deckId } = id.data;
-
-    const exportCardList = await this.service.exportCardList(
-      deckId,
-      filter.data.filter,
-    );
-    res.type("text/plain").send(exportCardList);
   };
 
   deckStats = async (req: Request, res: Response) => {
-    try {
-      let deckId = z.string().uuid().parse(req.params.deckId);
-      const deckStats = await this.service.deckStats(deckId);
-      return res.json(deckStats);
-    } catch (err) {
-      res.status(400).json(err);
+    if (!req.user) {
+      res.status(403).json({
+        Error: "Access denied",
+        Reason: "No userId provided",
+      });
+    } else {
+      const userId = req.user.sub;
+      try {
+        let deckId = z.string().uuid().parse(req.params.deckId);
+        const deckStats = await this.service.deckStats(userId, deckId);
+        return res.json(deckStats);
+      } catch (err) {
+        res.status(400).json(err);
+      }
     }
   };
 }

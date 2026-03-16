@@ -1,5 +1,4 @@
 import { prisma } from "../db/prisma";
-import { Prisma } from "@prisma/client";
 
 // DTOs (Data Transfer Objects): the shapes we expect for input data.
 import { createDeckDTO } from "../dtos/deck.dto";
@@ -10,11 +9,12 @@ export type UpdateDeckData = {
 };
 
 export class DeckRepository {
-  findAllDecks = async () => {
+  findAllDecks = async (userId: string) => {
     const decks = await prisma.deck.findMany({
       orderBy: { updatedAt: "desc" },
       select: {
         id: true,
+        user_id: true,
         name: true,
         cards_max: true,
         commander_card_id: true,
@@ -26,10 +26,15 @@ export class DeckRepository {
           },
         },
       },
+
+      where: {
+        user_id: userId,
+      },
     });
 
     return decks.map((deck) => ({
       id: deck.id,
+      user_id: deck.user_id,
       name: deck.name,
       total_cards: deck._count.cards,
       cards_max: deck.cards_max,
@@ -39,16 +44,21 @@ export class DeckRepository {
     }));
   };
 
-  async deleteDeck(id: string) {
+  async deleteDeck(userId: string, deckId: string) {
     const deletedDeck = await prisma.deck.delete({
-      where: { id: id },
+      where: { id: deckId, user_id: userId },
     });
 
     return deletedDeck;
   }
 
-  async createDeck(data: createDeckDTO) {
-    return prisma.deck.create({ data });
+  async createDeck(data: createDeckDTO, userId: string) {
+    return prisma.deck.create({
+      data: {
+        ...data,
+        user_id: userId,
+      },
+    });
   }
 
   async deckAlreadyExists(name: string) {
@@ -61,8 +71,10 @@ export class DeckRepository {
     return deck;
   }
 
-  async findDeckById(id: string) {
-    return await prisma.deck.findUnique({ where: { id } }); // retorna Deck | null
+  async findDeckById(userId: string, deckId: string) {
+    return await prisma.deck.findUnique({
+      where: { id: deckId, user_id: userId },
+    }); // retorna Deck | null
   }
 
   async checkMaxCardsandCurrentCards(deckId: string) {
@@ -88,15 +100,15 @@ export class DeckRepository {
     return object;
   }
 
-  async deleteAllCardsFromDeck(deckId: string) {
+  async deleteAllCardsFromDeck(userId: string, deckId: string) {
     // 1. buscar os cards
     const cards = await prisma.card.findMany({
-      where: { deckId },
+      where: { deckId: deckId },
     });
 
     // 2. deletar
     await prisma.card.deleteMany({
-      where: { deckId },
+      where: { deckId: deckId },
     });
 
     // 3. retornar os dados deletados
@@ -121,9 +133,9 @@ export class DeckRepository {
     return;
   }
 
-  updateDeckInfo(id: string, data: UpdateDeckData) {
+  updateDeckInfo(userId: string, id: string, data: UpdateDeckData) {
     return prisma.deck.update({
-      where: { id },
+      where: { id: id, user_id: userId },
       data: {
         ...(data.name !== undefined ? { name: data.name } : {}),
         ...(data.cards_max !== undefined ? { cards_max: data.cards_max } : {}),
@@ -153,10 +165,10 @@ export class DeckRepository {
     return deck?.commander_card_id ?? null;
   }
 
-  async deckStats(deckId: string) {
+  async deckStats(userId: string, deckId: string) {
     const [deck, total_cards, owned_cards] = await prisma.$transaction([
       prisma.deck.findUnique({
-        where: { id: deckId },
+        where: { id: deckId, user_id: userId },
         select: {
           id: true,
           name: true,

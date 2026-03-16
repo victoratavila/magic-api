@@ -7,10 +7,10 @@ datasource db {
 }
 
 model Card {
-  id   String  @id @default(uuid())
-  name String
-  own  Boolean @default(false)
-  set String?
+  id        String  @id @default(uuid())
+  name      String
+  own       Boolean @default(false)
+  set       String?
   image_url String?
 
   deckId String @map("belongs_to_deck_id")
@@ -26,16 +26,52 @@ model Card {
 }
 
 model Deck {
-  id        String @id @default(uuid())
-  name      String
-  cards_max Int
-  commander_card_id  String?
+  id                String @id @default(uuid())
+  user_id           String
+  name              String
+  cards_max         Int
+  commander_card_id String?
 
-  cards     Card[]
+  user  User  @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  cards Card[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@index([user_id])
+
   @@map("Deck")
 }
 
+enum Role {
+  user
+  admin
+}
+
+model User {
+  id       String @id @default(uuid())
+  username String
+  role     Role   @default(user)
+  email    String @unique
+  password String
+
+  decks Deck[]
+
+  passwordResetTokens PasswordResetToken[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
+}

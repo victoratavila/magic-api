@@ -223,8 +223,8 @@ export class CardsService {
     return this.repo.deleteAllCards();
   }
 
-  async createCard(data: CreateCardDTO) {
-    const deckExists = await this.deckRepo.findDeckById(data.deckId);
+  async createCard(userId: string, data: CreateCardDTO) {
+    const deckExists = await this.deckRepo.findDeckById(userId, data.deckId);
     if (!deckExists) throw new Error("Deck not found");
 
     // Search for the card image
@@ -268,9 +268,14 @@ export class CardsService {
     return this.repo.createCard(payload);
   }
 
-  async findCardsByDeck(id: string, page: number, limit: number) {
+  async findCardsByDeck(
+    userId: string,
+    id: string,
+    page: number,
+    limit: number,
+  ) {
     // Check if deck exists before searching for it
-    const deckExists = await this.deckRepo.findDeckById(id);
+    const deckExists = await this.deckRepo.findDeckById(userId, id);
 
     if (deckExists == null) {
       throw new Error("Deck not found");
@@ -280,9 +285,9 @@ export class CardsService {
     return cards;
   }
 
-  async findCardsToExport(id: string, filter: string) {
+  async findCardsToExport(userId: string, id: string, filter: string) {
     // Check if deck exists before searching for it
-    const deckExists = await this.deckRepo.findDeckById(id);
+    const deckExists = await this.deckRepo.findDeckById(userId, id);
 
     if (deckExists == null) {
       throw new Error("Deck not found");
@@ -304,8 +309,8 @@ export class CardsService {
     }
   }
 
-  async updateAllCardsOwnership(deckId: string, own: boolean) {
-    const deckExists = await this.deckRepo.findDeckById(deckId);
+  async updateAllCardsOwnership(userId: string, deckId: string, own: boolean) {
+    const deckExists = await this.deckRepo.findDeckById(userId, deckId);
 
     if (deckExists == null) {
       throw new Error("Deck not found");

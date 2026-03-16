@@ -27,119 +27,138 @@ export class CardsController {
   };
   // controller
   findCardsByDeck = async (req: Request, res: Response) => {
-    try {
-      const { deckId } = deckIdParamSchema.parse(req.params);
-      const { page, limit } = req.query;
-
-      if (page == null || limit == null) {
-        return res.status(400).json({
-          success: false,
-          error: "please provide page and limit",
-        });
-      }
-
-      const pageNumber = Number(page);
-      const limitNumber = Number(limit);
-
-      if (
-        !Number.isInteger(pageNumber) ||
-        !Number.isInteger(limitNumber) ||
-        pageNumber < 1 ||
-        limitNumber < 1
-      ) {
-        return res.status(400).json({
-          success: false,
-          error: "page and limit must be positive integers",
-        });
-      }
-
-      const safeLimit = Math.min(limitNumber, 100);
-
-      const cardAmountLimit = (
-        await this.deckService.checkMaxCardsandCurrentCards(deckId)
-      ).cards_max;
-
-      const cards = await this.service.findCardsByDeck(
-        deckId,
-        pageNumber,
-        safeLimit,
-      );
-
-      return res.status(200).json({
-        success: true,
-        deckId,
-        cards_max: cardAmountLimit,
-        pagination: {
-          total: cards.total,
-          page: cards.page,
-          limit: cards.limit,
-          totalPages: cards.totalPages,
-        },
-        data: cards.data,
+    if (!req.user) {
+      res.status(403).json({
+        Error: "Access denied",
+        Reason: "No userId provided",
       });
-    } catch (error: any) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({
+    } else {
+      const userId = req.user.sub;
+
+      try {
+        const { deckId } = deckIdParamSchema.parse(req.params);
+        const { page, limit } = req.query;
+
+        if (page == null || limit == null) {
+          return res.status(400).json({
+            success: false,
+            error: "please provide page and limit",
+          });
+        }
+
+        const pageNumber = Number(page);
+        const limitNumber = Number(limit);
+
+        if (
+          !Number.isInteger(pageNumber) ||
+          !Number.isInteger(limitNumber) ||
+          pageNumber < 1 ||
+          limitNumber < 1
+        ) {
+          return res.status(400).json({
+            success: false,
+            error: "page and limit must be positive integers",
+          });
+        }
+
+        const safeLimit = Math.min(limitNumber, 100);
+
+        const cardAmountLimit = (
+          await this.deckService.checkMaxCardsandCurrentCards(deckId)
+        ).cards_max;
+
+        const cards = await this.service.findCardsByDeck(
+          userId,
+          deckId,
+          pageNumber,
+          safeLimit,
+        );
+
+        return res.status(200).json({
+          success: true,
+          deckId,
+          cards_max: cardAmountLimit,
+          pagination: {
+            total: cards.total,
+            page: cards.page,
+            limit: cards.limit,
+            totalPages: cards.totalPages,
+          },
+          data: cards.data,
+        });
+      } catch (error: any) {
+        if (error instanceof z.ZodError) {
+          return res.status(400).json({
+            success: false,
+            error: "Invalid deckId format",
+          });
+        }
+
+        if (error.message === "Deck not found") {
+          return res.status(404).json({
+            success: false,
+            error: "Deck not found",
+          });
+        }
+
+        return res.status(500).json({
           success: false,
-          error: "Invalid deckId format",
+          error: "Internal error",
         });
       }
-
-      if (error.message === "Deck not found") {
-        return res.status(404).json({
-          success: false,
-          error: "Deck not found",
-        });
-      }
-
-      return res.status(500).json({
-        success: false,
-        error: "Internal error",
-      });
     }
   };
 
   findByFilter = async (req: Request, res: Response) => {
-    try {
-      const { deckId, name, filter } = searchFilter.parse(req.query);
-      const { page, limit } = req.query;
-
-      if (page == null || limit == null) {
-        return res.status(400).json({
-          error: "please provide page and limit",
-        });
-      }
-
-      const pageNumber = Number(page);
-      const limitNumber = Number(limit);
-
-      if (
-        !Number.isInteger(pageNumber) ||
-        !Number.isInteger(limitNumber) ||
-        pageNumber < 1 ||
-        limitNumber < 1
-      ) {
-        return res.status(400).json({
-          error: "page and limit must be positive integers",
-        });
-      }
-
-      const safeLimit = Math.min(limitNumber, 100);
-
-      const result = await this.service.findByFilter(
-        deckId,
-        name,
-        filter,
-        pageNumber,
-        safeLimit,
-      );
-
-      return res.status(200).json(result);
-    } catch (err) {
-      return res.status(400).json({
-        error:
-          "Use ?deckId=...&filter=all|own|missing&name=optional&page=1&limit=20",
+    if (!req.user) {
+      res.status(403).json({
+        Error: "Access denied",
+        Reason: "No userId provided",
       });
+    } else {
+      const userId = req.user.sub;
+
+      try {
+        const { deckId, name, filter } = searchFilter.parse(req.query);
+        const { page, limit } = req.query;
+
+        if (page == null || limit == null) {
+          return res.status(400).json({
+            error: "please provide page and limit",
+          });
+        }
+
+        const pageNumber = Number(page);
+        const limitNumber = Number(limit);
+
+        if (
+          !Number.isInteger(pageNumber) ||
+          !Number.isInteger(limitNumber) ||
+          pageNumber < 1 ||
+          limitNumber < 1
+        ) {
+          return res.status(400).json({
+            error: "page and limit must be positive integers",
+          });
+        }
+
+        const safeLimit = Math.min(limitNumber, 100);
+
+        const result = await this.service.findByFilter(
+          deckId,
+          name,
+          filter,
+          pageNumber,
+          safeLimit,
+        );
+
+        return res.status(200).json(result);
+      } catch (err) {
+        return res.status(400).json({
+          error:
+            "Use ?deckId=...&filter=all|own|missing&name=optional&page=1&limit=20",
+        });
+      }
     }
   };
 
@@ -233,106 +252,124 @@ export class CardsController {
   };
 
   create = async (req: Request, res: Response) => {
-    try {
-      const data = CreateCardDTO.parse(req.body);
-      const cardExists = await this.service.findCardByName(data.name);
-
-      if (cardExists == false) {
-        return res.status(404).json({
-          error: `No card was found matching the provided name, please try with a different one`,
-        });
-      }
-
-      const createdCard = await this.service.createCard(data);
-
-      return res.status(201).json({
-        success: true,
-        card_created: createdCard,
+    if (!req.user) {
+      res.status(403).json({
+        Error: "Access denied",
+        Reason: "No userId provided",
       });
-    } catch (error: any) {
-      if (error instanceof errorClass) {
-        return res.status(error.statusCode).json({
-          success: false,
-          message: error.message,
-        });
-      }
+    } else {
+      try {
+        const data = CreateCardDTO.parse(req.body);
+        const cardExists = await this.service.findCardByName(data.name);
+        const userId = req.user.sub;
 
-      if (error.message === "Deck not found") {
-        return res.status(404).json({
-          success: false,
-          error:
-            "Deck not found. A card can only be created if the target deck exists.",
-        });
-      }
-
-      // Erro de validação (DTO)
-      if (error instanceof ZodError) {
-        return res.status(400).json({
-          success: false,
-          error: "Invalid request body",
-          details: error.errors,
-        });
-      }
-
-      // Erro conhecido do Prisma (banco)
-      if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        // Unique violation
-        if (error.code === "P2002") {
-          return res.status(409).json({
-            success: false,
-            error: "Duplicate value (unique constraint)",
-            details: error.meta, // geralmente mostra quais campos
+        if (cardExists == false) {
+          return res.status(404).json({
+            error: `No card was found matching the provided name, please try with a different one`,
           });
         }
 
-        return res.status(400).json({
+        const createdCard = await this.service.createCard(userId, data);
+
+        return res.status(201).json({
+          success: true,
+          card_created: createdCard,
+        });
+      } catch (error: any) {
+        if (error instanceof errorClass) {
+          return res.status(error.statusCode).json({
+            success: false,
+            message: error.message,
+          });
+        }
+
+        if (error.message === "Deck not found") {
+          return res.status(404).json({
+            success: false,
+            error:
+              "Deck not found. A card can only be created if the target deck exists.",
+          });
+        }
+
+        // Erro de validação (DTO)
+        if (error instanceof ZodError) {
+          return res.status(400).json({
+            success: false,
+            error: "Invalid request body",
+            details: error.errors,
+          });
+        }
+
+        // Erro conhecido do Prisma (banco)
+        if (error instanceof Prisma.PrismaClientKnownRequestError) {
+          // Unique violation
+          if (error.code === "P2002") {
+            return res.status(409).json({
+              success: false,
+              error: "Duplicate value (unique constraint)",
+              details: error.meta, // geralmente mostra quais campos
+            });
+          }
+
+          return res.status(400).json({
+            success: false,
+            error: "Database request error",
+            details: { code: error.code, message: error.message },
+          });
+        }
+
+        // Qualquer outro erro
+        return res.status(500).json({
           success: false,
-          error: "Database request error",
-          details: { code: error.code, message: error.message },
+          error: "Internal server error",
+          details: String(error?.message ?? error),
         });
       }
-
-      // Qualquer outro erro
-      return res.status(500).json({
-        success: false,
-        error: "Internal server error",
-        details: String(error?.message ?? error),
-      });
     }
   };
 
   updateAllCardsOwnership = async (req: Request, res: Response) => {
     const parsed = updateAllSchema.safeParse(req.query);
 
-    if (!parsed.success) {
-      return res.status(400).json({
-        error: "Use ?deckId=<uuid>&own=true|false",
-        details: parsed.error.flatten(),
+    if (!req.user) {
+      res.status(403).json({
+        Error: "Access denied",
+        Reason: "No userId provided",
       });
-    }
+    } else {
+      const userId = req.user.sub;
 
-    const { deckId, own } = parsed.data;
-
-    try {
-      const deckExists = await this.deckService.findDeckById(deckId);
-
-      if (deckExists == null) {
-        return res.status(404).json({
-          error: "No deck found matching the provided id",
+      if (!parsed.success) {
+        return res.status(400).json({
+          error: "Use ?deckId=<uuid>&own=true|false",
+          details: parsed.error.flatten(),
         });
       }
 
-      const updatedCards = await this.service.updateAllCardsOwnership(
-        deckId,
-        own,
-      );
-      res.status(200).json({
-        affectedCards: updatedCards.count,
-      });
-    } catch (error) {
-      return res.status(500).json({
-        error: "Internal error",
-      });
+      const { deckId, own } = parsed.data;
+
+      try {
+        const deckExists = await this.deckService.findDeckById(userId, deckId);
+
+        if (deckExists == null) {
+          return res.status(404).json({
+            error: "No deck found matching the provided id",
+          });
+        }
+
+        const updatedCards = await this.service.updateAllCardsOwnership(
+          userId,
+          deckId,
+          own,
+        );
+        res.status(200).json({
+          affectedCards: updatedCards.count,
+        });
+      } catch (error) {
+        return res.status(500).json({
+          error: "Internal error",
+        });
+      }
     }
   };
 
