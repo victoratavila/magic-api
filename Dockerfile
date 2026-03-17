@@ -32,7 +32,8 @@ COPY --from=build /app/dist ./dist
 
 EXPOSE 8080
 
-ENV RESEND_API_KEY=re_TESTE123
+ARG RESEND_API_KEY
+ENV RESEND_API_KEY=$RESEND_API_KEY
 
 # 👇 Aqui usa a DATABASE_URL REAL do Dokploy
 CMD sh -c "sleep 5 && npx prisma migrate deploy --config ./prisma.config.ts && node dist/app.js"
