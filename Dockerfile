@@ -10,8 +10,8 @@ COPY prisma.config.ts ./prisma.config.ts
 COPY tsconfig.json ./
 COPY src ./src
 
-# NÃO definir DATABASE_URL aqui (deixa vir do ambiente)
-# Evita problemas com host incorreto (localhost vs db)
+# 👇 DATABASE_URL fake só pro build (não usada de verdade)
+ENV DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder"
 
 RUN npx prisma generate --config ./prisma.config.ts
 
@@ -32,5 +32,5 @@ COPY --from=build /app/dist ./dist
 
 EXPOSE 8080
 
-# Aguarda o banco subir + roda migrations + inicia app
+# 👇 Aqui usa a DATABASE_URL REAL do Dokploy
 CMD sh -c "sleep 5 && npx prisma migrate deploy --config ./prisma.config.ts && node dist/app.js"
