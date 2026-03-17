@@ -4,6 +4,7 @@ import bcrypt from "bcrypt";
 import { PasswordResetRepository } from "../repositories/passwordReset.repository";
 import { sendResetPasswordEmail } from "./emails/sendResetPasswordEmail.services";
 import { prisma } from "../db/prisma";
+import { sendPasswordResetConfirmation } from "./emails/sendPasswordResetConfirmation";
 
 export class PasswordResetService {
   private repo = new PasswordResetRepository();
@@ -76,6 +77,12 @@ export class PasswordResetService {
      */
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    const findUserEmail = await prisma.user.findFirst({
+      where: { id: storedToken.userId },
+    });
+
+    const userEmail = findUserEmail?.email;
+
     await prisma.user.update({
       where: { id: storedToken.userId },
       data: {
@@ -83,9 +90,11 @@ export class PasswordResetService {
       },
     });
 
-    /**
-     * token não pode ser reutilizado
-     */
-    await this.repo.delete(storedToken.id);
+    if (userEmail) {
+      sendPasswordResetConfirmation(userEmail);
+      await this.repo.delete(storedToken.id);
+    } else {
+      await this.repo.delete(storedToken.id);
+    }
   }
 }
