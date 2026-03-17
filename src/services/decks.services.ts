@@ -43,17 +43,19 @@ export type BulkAddResponse = {
 };
 
 type BulkOptions = {
-  chunkThreshold: number; // a partir de quantas cartas começa a chunkar
-  chunkSize: number; // tamanho de cada lote
-  imageConcurrency: number; // concorrência para fetch de imagens
-  skipDuplicates: boolean; // só funciona se houver unique constraint correspondente
+  chunkThreshold: number;
+  chunkSize: number;
+  imageConcurrency: number;
+  skipDuplicates: boolean;
+  parallelChunks: number; // ← adicionar
 };
 
 const DEFAULT_BULK_OPTIONS: BulkOptions = {
-  chunkThreshold: 50,
-  chunkSize: 100,
-  imageConcurrency: 5,
+  chunkThreshold: 100,
+  chunkSize: 50,
+  imageConcurrency: 10,
   skipDuplicates: false,
+  parallelChunks: 3, // ← adicionar
 };
 
 function chunkArray<T>(arr: T[], size: number): T[][] {
@@ -194,15 +196,24 @@ export class DeckService {
     options: Partial<BulkOptions> = {},
   ): Promise<BulkAddResponse> {
     const opts = { ...DEFAULT_BULK_OPTIONS, ...options };
-
     const deckId = z.string().uuid().parse(payload.deckId);
     const parsed = parseDeckBulkText(payload.bulkText);
 
+    if (parsed.items.length === 0) {
+      return {
+        created: 0,
+        parsedLines: 0,
+        warnings: parsed.warnings.length
+          ? parsed.warnings
+          : ["No valid card lines found."],
+      };
+    }
+
     const expandedRaw = parsed.items.flatMap((line) =>
-      Array.from({ length: line.qty }).map(() => ({
+      Array.from({ length: line.qty }, () => ({
         deckId,
         name: line.name,
-        set: line.setCode,
+        set: line.setCode ?? null,
         own: payload.ownDefault ?? false,
         image_url: null as string | null,
       })),
@@ -218,8 +229,103 @@ export class DeckService {
       };
     }
 
-    // Checa limite do deck (fora de transaction longa)
-    const deck = await prisma.deck.findUnique({
+    // ── Helper: fetch com concorrência limitada ────────────────────────────
+    type CardForFetch = {
+      name: string;
+      set: string | null;
+      collectorNumber: string | null;
+    };
+
+    const fetchImagesWithConcurrency = async (
+      cards: CardForFetch[],
+      concurrency: number,
+    ): Promise<Map<string, string | null>> => {
+      const cardToImage = new Map<string, string | null>();
+      let idx = 0;
+
+      const worker = async () => {
+        while (idx < cards.length) {
+          const current = idx++;
+          const c = cards[current]!;
+          const key = `${c.name}::${c.set}::${c.collectorNumber}`;
+
+          if (!c.set || !c.collectorNumber) {
+            // Fallback: busca só pelo nome
+            try {
+              const url = `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(c.name)}`;
+              const res = await fetch(url, {
+                signal: AbortSignal.timeout(5_000),
+              });
+              if (!res.ok) {
+                cardToImage.set(key, null);
+                continue;
+              }
+              const data = await res.json();
+              const img =
+                data.image_uris?.normal ??
+                data.card_faces?.[0]?.image_uris?.normal ??
+                null;
+              cardToImage.set(key, img);
+            } catch {
+              cardToImage.set(key, null);
+            }
+            continue;
+          }
+
+          try {
+            // Tenta endpoint direto por set/number
+            const urlDirect = `https://api.scryfall.com/cards/${encodeURIComponent(
+              c.set.toLowerCase(),
+            )}/${encodeURIComponent(c.collectorNumber)}`;
+            const resDirect = await fetch(urlDirect, {
+              signal: AbortSignal.timeout(5_000),
+            });
+
+            if (resDirect.ok) {
+              const data = await resDirect.json();
+              const img =
+                data.image_uris?.normal ??
+                data.card_faces?.[0]?.image_uris?.normal ??
+                null;
+              cardToImage.set(key, img);
+              continue;
+            }
+
+            // Fallback: busca por nome + set
+            const urlNamed = `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(
+              c.name,
+            )}&set=${encodeURIComponent(c.set.toLowerCase())}`;
+            const resNamed = await fetch(urlNamed, {
+              signal: AbortSignal.timeout(5_000),
+            });
+
+            if (!resNamed.ok) {
+              cardToImage.set(key, null);
+              continue;
+            }
+            const dataNamed = await resNamed.json();
+            const img =
+              dataNamed.image_uris?.normal ??
+              dataNamed.card_faces?.[0]?.image_uris?.normal ??
+              null;
+            cardToImage.set(key, img);
+          } catch {
+            cardToImage.set(key, null);
+          }
+        }
+      };
+
+      await Promise.all(
+        Array.from({ length: Math.min(concurrency, cards.length) }, () =>
+          worker(),
+        ),
+      );
+      return cardToImage;
+    };
+    // ───────────────────────────────────────────────────────────────────────
+
+    // Dispara query do deck e fetch de imagens em paralelo
+    const deckPromise = prisma.deck.findUnique({
       where: { id: deckId },
       select: {
         cards_max: true,
@@ -227,68 +333,89 @@ export class DeckService {
       },
     });
 
-    const expanded = expandedRaw;
+    const shouldFetchImages = payload.fetchImages ?? true;
+
+    const imagePromise: Promise<Map<string, string | null>> = shouldFetchImages
+      ? (() => {
+          const uniqueKeys = new Map<string, CardForFetch>();
+          for (const line of parsed.items) {
+            const key = `${line.name}::${line.setCode ?? null}::${line.collectorNumber ?? null}`;
+            uniqueKeys.set(key, {
+              name: line.name,
+              set: line.setCode ?? null,
+              collectorNumber: line.collectorNumber ?? null,
+            });
+          }
+          return fetchImagesWithConcurrency(
+            Array.from(uniqueKeys.values()),
+            opts.imageConcurrency ?? 10,
+          );
+        })()
+      : Promise.resolve(new Map());
+
+    const [deck, cardToImage] = await Promise.all([deckPromise, imagePromise]);
 
     if (!deck) throw new Error("Deck not found.");
 
-    const currentCards = deck._count.cards;
-    const tryingToAdd = expanded.length;
-    const cardsMax = deck.cards_max;
+    const {
+      cards_max: cardsMax,
+      _count: { cards: currentCards },
+    } = deck;
+    const tryingToAdd = expandedRaw.length;
 
     if (currentCards + tryingToAdd > cardsMax) {
       throw new DeckLimitExceededError({ cardsMax, currentCards, tryingToAdd });
     }
 
-    // Fetch de imagens fora do DB (concorrência limitada)
-    const shouldFetchImages = payload.fetchImages ?? true;
-
+    // Aplica imagens usando name::set como chave
     if (shouldFetchImages) {
-      const uniqueNames = Array.from(new Set(expanded.map((c) => c.name)));
+      const imageByNameSet = new Map<string, string | null>();
+      for (const [key, img] of cardToImage) {
+        const [name, set] = key.split("::");
+        imageByNameSet.set(`${name}::${set}`, img);
+      }
 
-      const nameImgPairs = await mapLimit(
-        uniqueNames,
-        opts.imageConcurrency,
-        async (name) => {
-          try {
-            const img = await fetchImageUrlByName(name);
-            return [name, img] as const;
-          } catch {
-            return [name, null] as const;
-          }
-        },
-      );
-
-      const nameToImage = new Map<string, string | null>(nameImgPairs);
-
-      for (const c of expanded) {
-        c.image_url = nameToImage.get(c.name) ?? null;
+      for (const c of expandedRaw) {
+        c.image_url = imageByNameSet.get(`${c.name}::${c.set}`) ?? null;
       }
     }
 
-    // Inserir em chunks (evita P2028 em imports grandes)
-    const chunks =
-      expanded.length >= opts.chunkThreshold
-        ? chunkArray(expanded, opts.chunkSize)
-        : [expanded];
+    // Inserção em chunks paralelos
+    const shouldChunk = expandedRaw.length >= opts.chunkThreshold;
+    const chunks = shouldChunk
+      ? chunkArray(expandedRaw, opts.chunkSize)
+      : [expandedRaw];
 
     let createdTotal = 0;
     const chunkMeta: Array<{ index: number; size: number; created: number }> =
       [];
 
-    for (let index = 0; index < chunks.length; index++) {
-      const data = chunks[index];
-      if (!data) continue; // satisfaz TS com noUncheckedIndexedAccess
-
-      const r = await prisma.card.createMany({
-        data,
-        ...(opts.skipDuplicates ? { skipDuplicates: true } : {}),
-      });
-
-      createdTotal += r.count;
-
-      if (chunks.length > 1) {
-        chunkMeta.push({ index, size: data.length, created: r.count });
+    if (shouldChunk) {
+      const PARALLEL_CHUNKS = opts.parallelChunks ?? 3;
+      for (let i = 0; i < chunks.length; i += PARALLEL_CHUNKS) {
+        const batch = chunks.slice(i, i + PARALLEL_CHUNKS);
+        const results = await Promise.all(
+          batch.map((data, localIdx) =>
+            prisma.card
+              .createMany({ data, skipDuplicates: false })
+              .then((r) => ({
+                index: i + localIdx,
+                size: data.length,
+                created: r.count,
+              })),
+          ),
+        );
+        for (const meta of results) {
+          createdTotal += meta.created;
+          chunkMeta.push(meta);
+        }
       }
+    } else {
+      const r = await prisma.card.createMany({
+        data: expandedRaw,
+        skipDuplicates: false,
+      });
+      createdTotal = r.count;
     }
 
     const base: BulkAddResponse = {
@@ -297,10 +424,7 @@ export class DeckService {
       warnings: parsed.warnings,
     };
 
-    // ✅ com exactOptionalPropertyTypes: só inclua a prop se existir (não atribua undefined)
-    if (chunkMeta.length) {
-      (base as any).chunks = chunkMeta;
-    }
+    if (chunkMeta.length) (base as any).chunks = chunkMeta;
 
     return base;
   }
@@ -323,6 +447,7 @@ export class DeckService {
 
   async setCommanderCard(deckId: string, card_id: string) {
     const isLegendary = await this.isCardLegendary(card_id);
+    console.log(isLegendary);
 
     if (!isLegendary) {
       throw createError(
