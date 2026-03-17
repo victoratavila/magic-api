@@ -2,7 +2,7 @@ import crypto from "crypto";
 import bcrypt from "bcrypt";
 
 import { PasswordResetRepository } from "../repositories/passwordReset.repository";
-import { sendResetPasswordEmail } from "./emails/email.services";
+import { sendResetPasswordEmail } from "./emails/sendResetPasswordEmail.services";
 import { prisma } from "../db/prisma";
 
 export class PasswordResetService {

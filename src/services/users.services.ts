@@ -3,6 +3,7 @@ import { UpdateUserDTO } from "../dtos/update.user.dto";
 import { UserRepository } from "../repositories/users.repository";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import { sendWelcomeEmail } from "./emails/sendWelcomeEmail";
 const secret = process.env.JWT_SECRET;
 
 export class UserService {
@@ -12,12 +13,21 @@ export class UserService {
     return await this.repo.findAllUsers();
   }
 
-  async createUser(data: CreateUserDTO) {
+  async createUser(data: CreateUserDTO): Promise<CreateUserDTO> {
     const hashedPassword = await bcrypt.hash(data.password, 12);
-    return await this.repo.createUser({
+
+    const result = await this.repo.createUser({
       ...data,
       password: hashedPassword,
     });
+
+    if (!result.id) {
+      throw new Error("Error creating user");
+    }
+
+    sendWelcomeEmail(data.email, data.username);
+
+    return result;
   }
 
   async validateUser(email: string, password: string) {
