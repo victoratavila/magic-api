@@ -1,7 +1,10 @@
 import { Resend } from "resend";
 
+if (!process.env.RESEND_API_KEY) {
+  throw new Error("RESEND_API_KEY not found");
+}
+
 const resend = new Resend(process.env.RESEND_API_KEY);
-console.log("RESEND KEY:", process.env.RESEND_API_KEY);
 
 export async function sendResetPasswordEmail(to: string, resetLink: string) {
   try {
