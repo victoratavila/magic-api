@@ -11,7 +11,7 @@ export async function sendResetPasswordEmail(to: string, resetLink: string) {
     const { data, error } = await resend.emails.send({
       from: "MagicManager <reset-password@magic-api.domainfortraining.xyz>",
       to,
-      subject: "Reset your password",
+      subject: "Redefina sua senha",
 
       template: {
         id: "reset-password",
