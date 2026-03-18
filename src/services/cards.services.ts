@@ -228,7 +228,7 @@ export class CardsService {
     if (!deckExists) throw new Error("Deck not found");
 
     // Search for the card image
-    const url = `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(data.name)}`;
+    const url = `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(data.name)}&set=${data.set}`;
 
     const resp = await fetch(url);
 
@@ -365,6 +365,7 @@ export class CardsService {
         new_image_url,
         new_set_name.toUpperCase(),
       );
+
       return updatedCard;
     }
 
