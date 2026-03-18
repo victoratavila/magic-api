@@ -455,7 +455,7 @@ export class DeckService {
     if (!isLegendary) {
       throw createError(
         400,
-        "Card should be Legendary to be set as the deck commander",
+        "Apenas Legendary Creatures podem ser definidos como comandantes",
       );
     } else {
       return this.repo.setCommanderCard(deckId, card_id);
