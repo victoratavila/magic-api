@@ -437,7 +437,10 @@ export class DeckService {
       const url = `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(card.name)}`;
       const response = await fetch(url);
       const data = await response.json();
-      if (data.type_line.includes("Legendary")) {
+      if (
+        data.type_line.includes("Legendary") &&
+        data.type_line.includes("Creature")
+      ) {
         return true;
       }
 
