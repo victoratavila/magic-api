@@ -175,8 +175,8 @@ export class DeckService {
     return this.repo.createDeck(name, userId);
   }
 
-  deckAlreadyExists(name: string) {
-    return this.repo.deckAlreadyExists(name);
+  deckAlreadyExists(name: string, userId: string) {
+    return this.repo.deckAlreadyExists(name, userId);
   }
 
   findDeckById(userId: string, deckId: string) {

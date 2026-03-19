@@ -61,10 +61,11 @@ export class DeckRepository {
     });
   }
 
-  async deckAlreadyExists(name: string) {
+  async deckAlreadyExists(name: string, userId: string) {
     const deck = prisma.deck.findMany({
       where: {
         name: name,
+        user_id: userId,
       },
     });
 
