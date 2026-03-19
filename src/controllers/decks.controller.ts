@@ -125,11 +125,12 @@ export class DeckController {
     } else {
       const deckAlreadyExists = await this.service.deckAlreadyExists(
         data.data.name,
+        userId,
       );
 
       if (deckAlreadyExists.length != 0) {
         res.status(400).json({
-          error: `Deck ${data.data.name} already exists`,
+          error: `Você já possui um deck com esse nome`,
         });
       } else {
         const createdDeck = await this.service.createDeck(data.data, userId);
