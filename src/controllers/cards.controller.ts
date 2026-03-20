@@ -265,7 +265,7 @@ export class CardsController {
 
         if (cardExists == false) {
           return res.status(404).json({
-            error: `No card was found matching the provided name, please try with a different one`,
+            error: `Nenhuma carta de Magic corresponde ao nome informado, tente um diferente`,
           });
         }
 
