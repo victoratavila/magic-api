@@ -33,7 +33,7 @@ export class UserController {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === "P2002") {
           return res.status(409).json({
-            message: "Email already exists",
+            message: "Este e-mail já está em uso. Tente um diferente.",
           });
         }
       }
