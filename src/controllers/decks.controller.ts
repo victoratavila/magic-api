@@ -230,7 +230,7 @@ export class DeckController {
     } catch (err) {
       if (err instanceof DeckLimitExceededError) {
         return res.status(400).json({
-          error: "Deck cards limit exceeded.",
+          error: `Limite de cartas atingido (${err.details.cardsMax} cartas)`,
           details: err.details,
         });
       }
