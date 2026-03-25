@@ -437,7 +437,6 @@ export class DeckService {
       const url = `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(card.name)}`;
       const response = await fetch(url);
       const data = await response.json();
-      console.log(data.type_line);
       if (
         data.type_line.includes("Legendary Creature") ||
         data.type_line.includes("Legendary Artifact")
@@ -451,7 +450,6 @@ export class DeckService {
 
   async setCommanderCard(deckId: string, card_id: string) {
     const isLegendary = await this.isCardLegendary(card_id);
-    console.log(isLegendary);
 
     if (!isLegendary) {
       throw createError(
