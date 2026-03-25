@@ -437,9 +437,10 @@ export class DeckService {
       const url = `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(card.name)}`;
       const response = await fetch(url);
       const data = await response.json();
+      console.log(data.type_line);
       if (
-        data.type_line.includes("Legendary") &&
-        data.type_line.includes("Creature")
+        data.type_line.includes("Legendary Creature") ||
+        data.type_line.includes("Legendary Artifact")
       ) {
         return true;
       }
@@ -455,7 +456,7 @@ export class DeckService {
     if (!isLegendary) {
       throw createError(
         400,
-        "Apenas Legendary Creatures podem ser definidos como comandantes",
+        "Apenas Legendary Creatures/Artifacts podem ser definidos como comandantes",
       );
     } else {
       return this.repo.setCommanderCard(deckId, card_id);
