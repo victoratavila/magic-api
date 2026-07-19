@@ -137,7 +137,12 @@ function pickImageUrl(s: ScryfallCard): string | null {
 async function fetchImageUrlByName(name: string): Promise<string | null> {
   const url = `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(name)}`;
   try {
-    const resp = await fetch(url);
+    const resp = await fetch(url, {
+      headers: {
+        "User-Agent": "MagicManager/1.0",
+        Accept: "application/json",
+      },
+    });
     if (!resp.ok) return null;
     const data = (await resp.json()) as ScryfallCard;
     return pickImageUrl(data);
@@ -255,6 +260,10 @@ export class DeckService {
               const url = `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(c.name)}`;
               const res = await fetch(url, {
                 signal: AbortSignal.timeout(5_000),
+                headers: {
+                  "User-Agent": "MagicManager/1.0",
+                  Accept: "application/json",
+                },
               });
               if (!res.ok) {
                 cardToImage.set(key, null);
@@ -279,6 +288,10 @@ export class DeckService {
             )}/${encodeURIComponent(c.collectorNumber)}`;
             const resDirect = await fetch(urlDirect, {
               signal: AbortSignal.timeout(5_000),
+              headers: {
+                "User-Agent": "MagicManager/1.0",
+                Accept: "application/json",
+              },
             });
 
             if (resDirect.ok) {
@@ -297,6 +310,10 @@ export class DeckService {
             )}&set=${encodeURIComponent(c.set.toLowerCase())}`;
             const resNamed = await fetch(urlNamed, {
               signal: AbortSignal.timeout(5_000),
+              headers: {
+                "User-Agent": "MagicManager/1.0",
+                Accept: "application/json",
+              },
             });
 
             if (!resNamed.ok) {
@@ -435,7 +452,12 @@ export class DeckService {
       throw new Error("Card not found");
     } else {
       const url = `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(card.name)}`;
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        headers: {
+          "User-Agent": "MagicManager/1.0",
+          Accept: "application/json",
+        },
+      });
       const data = await response.json();
       if (
         data.type_line.includes("Legendary Creature") ||
