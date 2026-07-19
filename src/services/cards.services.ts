@@ -33,7 +33,12 @@ type ScryfallNamedResponse = {
 async function checkIfCardExists(name: string) {
   const url = `https://api.scryfall.com/cards/named?exact=${name}`;
 
-  const response = await fetch(url);
+  const response = await fetch(url, {
+    headers: {
+      "User-Agent": "MagicManager/1.0",
+      Accept: "application/json",
+    },
+  });
 
   if (!response) {
     return undefined;
@@ -97,8 +102,8 @@ export class CardsService {
       const resp = await fetch("https://api.scryfall.com/cards/collection", {
         method: "POST",
         headers: {
+          "User-Agent": "MagicManager/1.0",
           Accept: "application/json",
-          "Content-Type": "application/json",
         },
         body: JSON.stringify({ identifiers }),
       });
@@ -210,7 +215,17 @@ export class CardsService {
       name,
     )}`;
 
-    const resp = await fetch(url);
+    const resp = await fetch(
+      `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(name)}`,
+      {
+        headers: {
+          "User-Agent": "MagicManager/1.0",
+          Accept: "application/json",
+        },
+      },
+    );
+
+    console.log(resp);
 
     if (!resp.ok) {
       return false;
@@ -230,7 +245,12 @@ export class CardsService {
     // Search for the card image
     const url = `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(data.name)}&set=${data.set}`;
 
-    const resp = await fetch(url);
+    const resp = await fetch(url, {
+      headers: {
+        "User-Agent": "MagicManager/1.0",
+        Accept: "application/json",
+      },
+    });
 
     // If no image is available in the Scryfall API
     if (!resp.ok) {
@@ -332,11 +352,20 @@ export class CardsService {
 
     const scryfallResponse = await fetch(
       `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(card_current_name)}`,
+      {
+        headers: {
+          "User-Agent": "MagicManager/1.0",
+          Accept: "application/json",
+        },
+      },
     ).then((r) => r.json());
 
-    const prints = await fetch(scryfallResponse.prints_search_uri).then((r) =>
-      r.json(),
-    );
+    const prints = await fetch(scryfallResponse.prints_search_uri, {
+      headers: {
+        "User-Agent": "MagicManager/1.0",
+        Accept: "application/json",
+      },
+    }).then((r) => r.json());
 
     return prints.data.map((p: any) => ({
       set: p.set,
