@@ -40,6 +40,23 @@ export class CardsRepository {
     });
   }
 
+  findDecksByUserId(userId: string) {
+    return prisma.deck.findMany({
+      where: {
+        user_id: userId,
+      },
+    });
+  }
+
+  findOwnedCardsByDeckId(deckId: string) {
+    return prisma.card.findMany({
+      where: {
+        deckId: deckId,
+        own: true,
+      },
+    });
+  }
+
   async findByNameAndOwnership(
     deckId: string,
     name: string | undefined,

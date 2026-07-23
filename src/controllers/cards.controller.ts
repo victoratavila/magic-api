@@ -21,10 +21,29 @@ export class CardsController {
     private deckService: DeckService,
   ) {}
 
-  list = async (req: Request, res: Response) => {
-    const cardList = await this.service.findAll();
-    return res.json(cardList);
+  collection = async (req: Request, res: Response) => {
+    if (!req.user) {
+      res.status(403).json({
+        Error: "Access denied",
+        Reason: "No userId provided",
+      });
+    } else {
+      const cardList = await this.service.generateCollection(req.user.sub);
+      return res.json(cardList);
+    }
   };
+
+  // countCardsPerDeck = async (req: Request, res: Response) => {
+  //   if (!req.user) {
+  //     res.status(403).json({
+  //       Error: "Access denied",
+  //       Reason: "No userId provided",
+  //     });
+  //   } else {
+  //     const countedCards = await this.service.countCardsPerDeck();
+  //     return countedCards;
+  //   }
+  // };
   // controller
   findCardsByDeck = async (req: Request, res: Response) => {
     if (!req.user) {

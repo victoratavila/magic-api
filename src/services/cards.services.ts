@@ -138,8 +138,77 @@ export class CardsService {
     return { imageMap, notFound };
   }
 
-  findAll() {
-    return this.repo.findAllInDatabase();
+  async generateCollection(userId: string) {
+    const decksByUser = await this.repo.findDecksByUserId(userId);
+
+    const ownedCards: Record<
+      string,
+      {
+        total_owned: number;
+        present_in_decks: number;
+        decks: Record<
+          string,
+          {
+            deckId: string;
+            deckName: string;
+            quantity: number;
+            cardIds: string[];
+          }
+        >;
+      }
+    > = {};
+
+    let totalOwnedCards = 0;
+
+    let deckWithMostOwnedCards = {
+      deckId: "",
+      deckName: "",
+      totalOwnedCards: 0,
+    };
+
+    for (const deckInfo of decksByUser) {
+      const cards = await this.repo.findOwnedCardsByDeckId(deckInfo.id);
+
+      totalOwnedCards += cards.length;
+
+      if (cards.length > deckWithMostOwnedCards.totalOwnedCards) {
+        deckWithMostOwnedCards = {
+          deckId: deckInfo.id,
+          deckName: deckInfo.name,
+          totalOwnedCards: cards.length,
+        };
+      }
+
+      for (const card of cards) {
+        const ownedCard = (ownedCards[card.name] ??= {
+          total_owned: 0,
+          present_in_decks: 0,
+          decks: {},
+        });
+
+        ownedCard.total_owned++;
+
+        const deck = (ownedCard.decks[deckInfo.id] ??= {
+          deckId: deckInfo.id,
+          deckName: deckInfo.name,
+          quantity: 0,
+          cardIds: [],
+        });
+
+        deck.quantity++;
+        deck.cardIds.push(card.id);
+      }
+    }
+
+    for (const ownedCard of Object.values(ownedCards)) {
+      ownedCard.present_in_decks = Object.keys(ownedCard.decks).length;
+    }
+
+    return {
+      total_owned_cards: totalOwnedCards,
+      deck_with_most_owned_cards: deckWithMostOwnedCards,
+      owned_cards: ownedCards,
+    };
   }
 
   async findByFilter(
@@ -224,8 +293,6 @@ export class CardsService {
         },
       },
     );
-
-    console.log(resp);
 
     if (!resp.ok) {
       return false;
