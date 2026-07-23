@@ -43,7 +43,7 @@ export function cardsRoutes() {
 
   // Card Routes
   router.post("/", authMiddleware, cardsController.create); // Create
-  router.get("/", authMiddleware, cardsController.list); // List all cards regardless of their decks
+  router.get("/collection", authMiddleware, cardsController.collection); // List all cards regardless of their decks
   router.get("/ownership", cardsController.findByOwnership);
   router.put("/:id", cardsController.updateOwnership); // Update card ownership by id
   router.delete("/:id", cardsController.delete); // Delete card by id
